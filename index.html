@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🍽️ מתכון בקליק</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&family=Frank+Ruhl+Libre:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --surface: #161616;
+    --card: #1e1e1e;
+    --accent: #e8b86d;
+    --accent2: #d4a35a;
+    --text: #f0ece4;
+    --muted: #888;
+    --green: #5cb85c;
+    --border: #2a2a2a;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Heebo', sans-serif; min-height: 100vh; direction: rtl; }
+
+  header {
+    background: linear-gradient(135deg, #1a1208 0%, #0d0d0d 60%);
+    border-bottom: 1px solid #2a2212;
+    padding: 20px 32px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .logo { font-family: 'Frank Ruhl Libre', serif; font-size: 1.8rem; font-weight: 900; color: var(--accent); display: flex; align-items: center; gap: 8px; }
+  .tagline { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+  .nav-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 28px 20px; }
+
+  .input-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; }
+  .input-section h2 { font-family: 'Frank Ruhl Libre', serif; font-size: 1.3rem; color: var(--accent); margin-bottom: 14px; }
+  .ingredients-input { width: 100%; background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; color: var(--text); font-family: 'Heebo', sans-serif; font-size: 1rem; resize: vertical; min-height: 76px; direction: rtl; }
+  .ingredients-input:focus { outline: none; border-color: var(--accent); }
+  .ingredients-input::placeholder { color: var(--muted); }
+
+  .filters-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; align-items: center; }
+  .filter-label { font-size: 0.82rem; color: var(--muted); }
+  .filter-btn { background: var(--bg); border: 1.5px solid var(--border); border-radius: 50px; padding: 6px 14px; color: var(--text); font-family: 'Heebo', sans-serif; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; }
+  .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #0d0d0d; font-weight: 700; }
+
+  .custom-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; align-items: center; }
+  .custom-row label { font-size: 0.82rem; color: var(--muted); }
+  .custom-row select, .custom-row input[type="number"] { background: var(--bg); border: 1.5px solid var(--border); border-radius: 8px; padding: 6px 10px; color: var(--text); font-family: 'Heebo', sans-serif; font-size: 0.82rem; direction: rtl; }
+  .custom-row select:focus, .custom-row input:focus { outline: none; border-color: var(--accent); }
+
+  .mode-tabs { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
+  .mode-tab { flex: 1; padding: 14px 8px; background: transparent; border: none; color: var(--muted); font-family: 'Heebo', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 3px; border-left: 1px solid var(--border); }
+  .mode-tab:last-child { border-left: none; }
+  .mode-tab .tab-icon { font-size: 1.3rem; }
+  .mode-tab .tab-sub { font-size: 0.7rem; opacity: 0.6; }
+  .mode-tab:hover { background: var(--card); color: var(--text); }
+  .mode-tab.active { background: var(--accent); color: #0d0d0d; font-weight: 700; }
+  .mode-tab.active .tab-sub { opacity: 0.7; }
+
+  .generate-btn { width: 100%; background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; border-radius: 12px; padding: 15px; color: #0d0d0d; font-family: 'Frank Ruhl Libre', serif; font-size: 1.1rem; font-weight: 900; cursor: pointer; transition: all 0.2s; margin-top: 16px; }
+  .generate-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(232,184,109,0.3); }
+  .generate-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 18px; }
+
+  .recipe-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: all 0.25s; animation: fadeUp 0.4s ease both; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+  .recipe-card:hover { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 10px 36px rgba(232,184,109,0.14); }
+  .card-body { padding: 18px; }
+  .card-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 50px; font-size: 0.72rem; font-weight: 700; margin-bottom: 10px; }
+  .badge-ai { background: rgba(232,184,109,0.15); color: var(--accent); }
+  .badge-web { background: rgba(125,219,125,0.15); color: #7ddb7d; }
+  .badge-mine { background: rgba(126,176,247,0.15); color: #7eb0f7; }
+  .best-badge { background: linear-gradient(135deg,#e8b86d,#f0c87d); color: #0d0d0d; font-size: 0.68rem; font-weight: 900; padding: 2px 9px; border-radius: 50px; display: inline-block; margin-bottom: 6px; }
+  .card-title { font-family: 'Frank Ruhl Libre', serif; font-size: 1.15rem; font-weight: 700; margin-bottom: 5px; }
+  .card-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
+  .card-meta { display: flex; gap: 10px; font-size: 0.76rem; color: var(--muted); flex-wrap: wrap; }
+  .dietary-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+  .dtag { background: rgba(255,255,255,0.06); border-radius: 4px; padding: 2px 7px; font-size: 0.7rem; color: var(--muted); }
+
+  .meal-plan-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; margin-top: 24px; }
+  .meal-plan-section h2 { font-family: 'Frank Ruhl Libre', serif; font-size: 1.2rem; color: var(--accent); margin-bottom: 14px; }
+  .plan-controls { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .plan-ctrl-btn { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px; color: var(--text); font-family: 'Heebo', sans-serif; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; }
+  .plan-ctrl-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .meal-plan-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .meal-plan-table th { background: var(--card); padding: 8px 10px; text-align: center; border: 1px solid var(--border); color: var(--accent); font-weight: 700; }
+  .meal-plan-table td { padding: 8px 10px; text-align: center; border: 1px solid var(--border); color: var(--muted); vertical-align: top; min-width: 80px; }
+  .meal-plan-table td.has-recipe { color: var(--text); background: rgba(232,184,109,0.05); cursor: pointer; }
+  .meal-plan-table td.has-recipe:hover { background: rgba(232,184,109,0.12); }
+  .plan-remove { font-size: 0.65rem; color: #c0392b; cursor: pointer; margin-top: 3px; display: block; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.82); z-index: 1000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 28px; max-width: 660px; width: 100%; max-height: 88vh; overflow-y: auto; animation: modalIn 0.28s ease; direction: rtl; }
+  @keyframes modalIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+  .modal-close { float: left; background: var(--border); border: none; color: var(--text); width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; }
+  .modal-title { font-family: 'Frank Ruhl Libre', serif; font-size: 1.7rem; font-weight: 900; color: var(--accent); margin-bottom: 4px; clear: both; margin-top: 8px; }
+  .modal-subtitle { font-size: 0.83rem; color: var(--muted); margin-bottom: 20px; }
+  .recipe-section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin: 18px 0 8px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+  .ingredients-list { list-style: none; }
+  .ingredients-list li { padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 0.88rem; display: flex; align-items: center; gap: 8px; }
+  .ingredients-list li::before { content: '•'; color: var(--accent); font-size: 1.1rem; }
+  .steps-list { list-style: none; }
+  .steps-list li { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.88rem; line-height: 1.6; display: flex; gap: 10px; align-items: flex-start; }
+  .step-num { min-width: 26px; height: 26px; background: var(--accent); color: #0d0d0d; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; margin-top: 2px; }
+  .nutritional-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
+  .nutr-box { background: var(--bg); border-radius: 10px; padding: 10px; text-align: center; }
+  .nutr-val { font-size: 1.2rem; font-weight: 700; color: var(--accent); }
+  .nutr-label { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+  .add-to-plan-btn { background: var(--surface); border: 1.5px solid var(--accent); border-radius: 10px; padding: 9px 18px; color: var(--accent); font-family: 'Heebo', sans-serif; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.2s; margin-top: 18px; display: inline-flex; align-items: center; gap: 6px; }
+  .add-to-plan-btn:hover { background: var(--accent); color: #0d0d0d; }
+
+  .add-recipe-form { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; margin-bottom: 22px; }
+  .add-recipe-form h3 { font-family: 'Frank Ruhl Libre', serif; font-size: 1.05rem; color: var(--accent); margin-bottom: 14px; }
+  .form-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 140px; }
+  .form-group label { font-size: 0.78rem; color: var(--muted); }
+  .form-group input, .form-group textarea, .form-group select { background: var(--bg); border: 1.5px solid var(--border); border-radius: 8px; padding: 8px 10px; color: var(--text); font-family: 'Heebo', sans-serif; font-size: 0.88rem; direction: rtl; }
+  .form-group input:focus, .form-group textarea:focus { outline: none; border-color: var(--accent); }
+  .form-group textarea { resize: vertical; min-height: 76px; }
+  .save-btn { background: var(--green); border: none; border-radius: 10px; padding: 9px 22px; color: #fff; font-family: 'Heebo', sans-serif; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+  .save-btn:hover { background: #4cae4c; }
+  .delete-btn { background: rgba(192,57,43,0.15); border: none; border-radius: 8px; padding: 4px 10px; color: #e74c3c; font-size: 0.76rem; cursor: pointer; margin-top: 10px; }
+  .delete-btn:hover { background: rgba(192,57,43,0.3); }
+
+  .loading-box { text-align: center; padding: 48px; color: var(--muted); }
+  .spinner { width: 44px; height: 44px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 14px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty-state { text-align: center; padding: 56px 20px; color: var(--muted); }
+  .empty-state .icon { font-size: 2.8rem; margin-bottom: 10px; }
+  .empty-state p { font-size: 0.9rem; }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .section-header h2 { font-family: 'Frank Ruhl Libre', serif; font-size: 1.2rem; }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .best-reason-box { background: rgba(232,184,109,0.08); border: 1px solid rgba(232,184,109,0.25); border-radius: 10px; padding: 10px 14px; font-size: 0.82rem; color: var(--accent); margin-bottom: 14px; }
+
+  .nutrition-bar-wrap { margin-top: 12px; }
+  .nutrition-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .nutrition-bar-label { width: 75px; font-size: 0.75rem; color: var(--muted); text-align: right; }
+  .nutrition-bar-bg { flex: 1; height: 7px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .nutrition-bar-fill { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
+  .nutrition-bar-val { font-size: 0.75rem; color: var(--text); width: 55px; }
+
+  @media (max-width: 600px) {
+    .mode-tab { font-size: 0.75rem; }
+    .nutritional-grid { grid-template-columns: repeat(2, 1fr); }
+    .meal-plan-table { font-size: 0.72rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div>
+      <div class="logo">🍽️ מתכון בקליק</div>
+      <div class="tagline">בינה מלאכותית בשירות המטבח שלך</div>
+    </div>
+    <div class="nav-btns">
+      <button class="filter-btn active" id="nav-search" onclick="showPage('search',this)">🔍 חיפוש מתכונים</button>
+      <button class="filter-btn" id="nav-mine" onclick="showPage('mine',this)">📚 המתכונים שלי</button>
+    </div>
+  </div>
+</header>
+
+<!-- SEARCH PAGE -->
+<div class="page active" id="page-search">
+<div class="container">
+  <div class="input-section">
+    <h2>🥕 מה יש לך במטבח?</h2>
+    <textarea class="ingredients-input" id="ingredientsInput" placeholder="לדוגמה: עוף, בצל, עגבניות, שום, פלפל אדום, תפוחי אדמה...&#10;רשמי מה יש לך ואנחנו נמציא מתכון מדהים!"></textarea>
+    <div class="filters-row">
+      <span class="filter-label">🥗 תזונה:</span>
+      <button class="filter-btn" onclick="toggleFilter(this,'ללא גלוטן')">🌾 ללא גלוטן</button>
+      <button class="filter-btn" onclick="toggleFilter(this,'טבעוני')">🌱 טבעוני</button>
+      <button class="filter-btn" onclick="toggleFilter(this,'צמחוני')">🥦 צמחוני</button>
+      <button class="filter-btn" onclick="toggleFilter(this,'כשר')">✡️ כשר</button>
+      <button class="filter-btn" onclick="toggleFilter(this,'ללא לקטוז')">🥛 ללא לקטוז</button>
+      <button class="filter-btn" onclick="toggleFilter(this,'קטוגני')">🥑 קטוגני</button>
+      <button class="filter-btn" onclick="toggleFilter(this,'עשיר בחלבון')">💪 עשיר בחלבון</button>
+    </div>
+    <div class="custom-row">
+      <label>👥 סועדים:</label>
+      <input type="number" id="servings" value="4" min="1" max="20" style="width:64px">
+      <label>⏱️ זמן מקסימלי:</label>
+      <select id="maxTime">
+        <option value="">ללא הגבלה</option>
+        <option value="15">15 דק'</option>
+        <option value="30">30 דק'</option>
+        <option value="45">45 דק'</option>
+        <option value="60">שעה</option>
+        <option value="90">עד 90 דק'</option>
+      </select>
+      <label>👨‍🍳 רמת קושי:</label>
+      <select id="difficulty">
+        <option value="">הכל</option>
+        <option value="קל">קל</option>
+        <option value="בינוני">בינוני</option>
+        <option value="מאתגר">מאתגר</option>
+      </select>
+      <label>🍱 ארוחה:</label>
+      <select id="mealType">
+        <option value="">הכל</option>
+        <option value="ארוחת בוקר">בוקר</option>
+        <option value="ארוחת צהריים">צהריים</option>
+        <option value="ארוחת ערב">ערב</option>
+        <option value="חטיף">חטיף</option>
+        <option value="קינוח">קינוח</option>
+      </select>
+    </div>
+    <button class="generate-btn" id="generateBtn" onclick="generateRecipes()">✨ מצאי לי מתכונים!</button>
+  </div>
+
+  <!-- MODE TABS -->
+  <div class="mode-tabs">
+    <button class="mode-tab active" id="tab-ai" onclick="setMode('ai',this)">
+      <span class="tab-icon">🤖</span>
+      <span>המצאת AI</span>
+      <span class="tab-sub">מתכון מקורי</span>
+    </button>
+    <button class="mode-tab" id="tab-web" onclick="setMode('web',this)">
+      <span class="tab-icon">🌐</span>
+      <span>חיפוש AI</span>
+      <span class="tab-sub">ממתכונים ידועים</span>
+    </button>
+    <button class="mode-tab" id="tab-myrecipes" onclick="setMode('mine',this)">
+      <span class="tab-icon">📚</span>
+      <span>המתכונים שלי</span>
+      <span class="tab-sub">ספריית המתכונים</span>
+    </button>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="resultsArea">
+    <div class="empty-state">
+      <div class="icon">🍳</div>
+      <p>הכניסי מרכיבים ולחצי על "מצאי לי מתכונים"</p>
+      <p style="margin-top:6px;font-size:0.78rem">בחרי מצב: המצאת AI, חיפוש AI, או המתכונים שלך</p>
+    </div>
+  </div>
+
+  <!-- MEAL PLAN -->
+  <div id="mealPlanSection" style="display:none" class="meal-plan-section">
+    <h2>📅 תכנון ארוחות שבועי</h2>
+    <div class="plan-controls">
+      <button class="plan-ctrl-btn" onclick="clearMealPlan()">🗑️ נקה תוכנית</button>
+      <button class="plan-ctrl-btn" onclick="printMealPlan()">🖨️ הדפסי תוכנית</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="meal-plan-table" id="mealPlanTable"></table>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- MY RECIPES PAGE -->
+<div class="page" id="page-mine">
+<div class="container">
+  <div class="add-recipe-form">
+    <h3>➕ הוספת מתכון חדש</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>שם המתכון *</label>
+        <input type="text" id="newRecipeName" placeholder="לדוגמה: אורז של סבתא">
+      </div>
+      <div class="form-group">
+        <label>קטגוריה</label>
+        <select id="newRecipeCategory">
+          <option>ארוחה ראשית</option><option>סלט</option><option>מרק</option>
+          <option>קינוח</option><option>אפייה</option><option>חטיף</option><option>ממרח</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>זמן הכנה (דקות)</label>
+        <input type="number" id="newRecipeTime" placeholder="30" min="1">
+      </div>
+      <div class="form-group">
+        <label>רמת קושי</label>
+        <select id="newRecipeDiff"><option>קל</option><option>בינוני</option><option>מאתגר</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>מרכיבים (שורה לכל מרכיב)</label>
+        <textarea id="newRecipeIngredients" placeholder="500 גר' עוף&#10;2 בצלים&#10;3 שיני שום"></textarea>
+      </div>
+      <div class="form-group">
+        <label>הוראות הכנה (שורה לכל שלב)</label>
+        <textarea id="newRecipeSteps" placeholder="לחמם שמן במחבת&#10;להוסיף בצל ולטגן&#10;להוסיף עוף..."></textarea>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>תגיות / דרישות תזונתיות (פסיק)</label>
+        <input type="text" id="newRecipeTags" placeholder="ללא גלוטן, טבעוני, מהיר">
+      </div>
+      <div class="form-group">
+        <label>הערות / טיפים</label>
+        <input type="text" id="newRecipeTip" placeholder="אפשר גם עם הודו...">
+      </div>
+    </div>
+    <button class="save-btn" onclick="saveMyRecipe()">💾 שמור מתכון</button>
+  </div>
+
+  <div class="section-header">
+    <h2>📚 המתכונים שלי</h2>
+    <span id="myRecipeCount" style="color:var(--muted);font-size:0.82rem"></span>
+  </div>
+  <div id="myRecipesGrid" class="results-grid">
+    <div class="empty-state" style="grid-column:1/-1">
+      <div class="icon">📖</div>
+      <p>עדיין לא הוספת מתכונים</p>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="recipeModal" onclick="closeModalBg(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+let activeFilters = new Set();
+let currentMode = 'ai';
+let myRecipes = JSON.parse(localStorage.getItem('myRecipes_v2') || '[]');
+const mealPlan = JSON.parse(localStorage.getItem('mealPlan_v2') || '{}');
+let lastRecipes = [];
+
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.nav-btns .filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (name === 'mine') renderMyRecipes();
+}
+
+function toggleFilter(btn, name) {
+  activeFilters.has(name) ? activeFilters.delete(name) : activeFilters.add(name);
+  btn.classList.toggle('active');
+}
+
+function setMode(mode, btn) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+async function generateRecipes() {
+  const ingredients = document.getElementById('ingredientsInput').value.trim();
+  if (!ingredients && currentMode !== 'mine') { alert('אנא הכניסי לפחות מרכיב אחד 😊'); return; }
+
+  if (currentMode === 'mine') {
+    showMyRecipesInSearch(ingredients);
+    return;
+  }
+
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true; btn.textContent = '⏳ מחפש מתכונים...';
+  document.getElementById('resultsArea').innerHTML = `<div class="loading-box"><div class="spinner"></div><div>מוצאת מתכונים מיוחדים עבורך...</div></div>`;
+
+  const filters = [...activeFilters].join(', ') || 'ללא הגבלות תזונתיות';
+  const servings = document.getElementById('servings').value;
+  const maxTime = document.getElementById('maxTime').value;
+  const difficulty = document.getElementById('difficulty').value;
+  const mealType = document.getElementById('mealType').value;
+
+  let prompt = '';
+  if (currentMode === 'ai') {
+    prompt = `אתה שף מומחה ישראלי. המשתמשת יש לה את המרכיבים: ${ingredients}.
+${[...activeFilters].length ? `דרישות תזונתיות חובה: ${filters}` : ''}
+${maxTime ? `זמן הכנה מקסימלי: ${maxTime} דקות` : ''}
+${difficulty ? `רמת קושי רצויה: ${difficulty}` : ''}
+${mealType ? `סוג ארוחה: ${mealType}` : ''}
+מספר סועדים: ${servings}
+
+המצא 3 מתכונים מקוריים ויצירתיים שאפשר להכין מהמרכיבים (מותר להוסיף תבלינים בסיסיים).
+סמן אחד כ-isBest:true וכתוב bestReason למה הוא הכי מומלץ.
+החזר JSON בלבד (בלי טקסט אחר, בלי markdown):
+{"recipes":[{"name":"שם","description":"תיאור מפתה","time":30,"difficulty":"קל","servings":${servings},"dietary":[],"isBest":false,"bestReason":"","ingredients":["..."],"steps":["..."],"nutrition":{"calories":350,"protein":25,"carbs":30,"fat":12},"tip":"טיפ של שף"}]}`;
+  } else {
+    prompt = `אתה שף ישראלי. ספקי 3 מתכונים מוכרים ופופולריים עם המרכיבים: ${ingredients}.
+${[...activeFilters].length ? `דרישות: ${filters}` : ''}
+${maxTime ? `עד ${maxTime} דקות` : ''}
+מספר סועדים: ${servings}
+
+סמן אחד כ-isBest:true עם bestReason. ציני source (שם האתר/הספר).
+החזר JSON בלבד:
+{"recipes":[{"name":"שם","description":"תיאור + מקור","time":30,"difficulty":"קל","servings":${servings},"dietary":[],"isBest":false,"bestReason":"","source":"מקור","ingredients":["..."],"steps":["..."],"nutrition":{"calories":300,"protein":20,"carbs":35,"fat":10},"tip":"טיפ"}]}`;
+  }
+
+  try {
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 3000, messages: [{ role: "user", content: prompt }] })
+    });
+    const data = await resp.json();
+    const text = data.content.map(i => i.text || '').join('');
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('no json');
+    const result = JSON.parse(match[0]);
+    lastRecipes = result.recipes;
+    renderRecipes(result.recipes, currentMode);
+    document.getElementById('mealPlanSection').style.display = 'block';
+    renderMealPlanTable();
+  } catch(e) {
+    document.getElementById('resultsArea').innerHTML = `<div class="empty-state"><div class="icon">😕</div><p>אירעה שגיאה, נסי שוב!</p><p style="font-size:0.72rem;margin-top:6px;color:#555">${e.message}</p></div>`;
+  }
+  btn.disabled = false; btn.textContent = '✨ מצאי לי מתכונים!';
+}
+
+function renderRecipes(recipes, mode) {
+  if (!recipes || !recipes.length) {
+    document.getElementById('resultsArea').innerHTML = `<div class="empty-state"><div class="icon">🤔</div><p>לא נמצאו מתכונים מתאימים</p></div>`;
+    return;
+  }
+  const bm = {ai:'badge-ai',web:'badge-web',mine:'badge-mine'};
+  const bl = {ai:'🤖 המצאת AI',web:'🌐 חיפוש AI',mine:'📚 המתכון שלי'};
+  const grid = document.createElement('div');
+  grid.className = 'results-grid';
+  recipes.forEach((r, i) => {
+    const card = document.createElement('div');
+    card.className = 'recipe-card';
+    card.style.animationDelay = (i * 0.1) + 's';
+    card.onclick = () => openRecipeModal(r, mode);
+    card.innerHTML = `<div class="card-body">
+      ${r.isBest ? '<div class="best-badge">⭐ ההמלצה שלנו</div><br>' : ''}
+      <span class="card-badge ${bm[mode]}">${bl[mode]}</span>
+      <div class="card-title">${r.name}</div>
+      <div class="card-desc">${r.description || ''}</div>
+      <div class="card-meta">
+        <span>⏱️ ${r.time || '?'} דק'</span>
+        <span>👨‍🍳 ${r.difficulty || '?'}</span>
+        <span>👥 ${r.servings || '?'}</span>
+        ${r.source ? `<span>🔗 ${r.source}</span>` : ''}
+      </div>
+      ${r.dietary && r.dietary.length ? `<div class="dietary-tags">${r.dietary.map(d=>`<span class="dtag">${d}</span>`).join('')}</div>` : ''}
+    </div>`;
+    grid.appendChild(card);
+  });
+  document.getElementById('resultsArea').innerHTML = '';
+  document.getElementById('resultsArea').appendChild(grid);
+}
+
+function openRecipeModal(r, mode) {
+  const n = r.nutrition || {};
+  document.getElementById('modalBody').innerHTML = `
+    <div class="modal-title">${r.name}</div>
+    <div class="modal-subtitle">${r.description || ''}</div>
+    <div class="card-meta" style="margin-bottom:14px">
+      <span>⏱️ ${r.time||'?'} דקות</span>
+      <span>👨‍🍳 ${r.difficulty||'?'}</span>
+      <span>👥 ${r.servings||'?'} סועדים</span>
+      ${r.source?`<span>🔗 ${r.source}</span>`:''}
+    </div>
+    ${r.dietary&&r.dietary.length?`<div class="dietary-tags" style="margin-bottom:12px">${r.dietary.map(d=>`<span class="dtag">${d}</span>`).join('')}</div>`:''}
+    ${r.isBest&&r.bestReason?`<div class="best-reason-box">⭐ <strong>למה זה הכי מומלץ:</strong> ${r.bestReason}</div>`:''}
+    <div class="recipe-section-title">🥕 מרכיבים</div>
+    <ul class="ingredients-list">${(r.ingredients||[]).map(i=>`<li>${i}</li>`).join('')}</ul>
+    <div class="recipe-section-title">👨‍🍳 הוראות הכנה</div>
+    <ol class="steps-list">${(r.steps||[]).map((s,i)=>`<li><span class="step-num">${i+1}</span><span>${s}</span></li>`).join('')}</ol>
+    ${r.tip?`<div style="background:var(--bg);border-right:3px solid var(--accent);padding:10px 14px;border-radius:8px;margin-top:14px;font-size:0.84rem"><strong>💡 טיפ של שף:</strong> ${r.tip}</div>`:''}
+    ${n.calories?`
+    <div class="recipe-section-title">📊 ערכים תזונתיים (למנה)</div>
+    <div class="nutritional-grid">
+      <div class="nutr-box"><div class="nutr-val">${n.calories}</div><div class="nutr-label">קלוריות</div></div>
+      <div class="nutr-box"><div class="nutr-val">${n.protein}g</div><div class="nutr-label">חלבון</div></div>
+      <div class="nutr-box"><div class="nutr-val">${n.carbs}g</div><div class="nutr-label">פחמימות</div></div>
+      <div class="nutr-box"><div class="nutr-val">${n.fat}g</div><div class="nutr-label">שומן</div></div>
+    </div>
+    <div class="nutrition-bar-wrap">
+      <div class="nutrition-bar-row"><div class="nutrition-bar-label">קלוריות</div><div class="nutrition-bar-bg"><div class="nutrition-bar-fill" style="width:${Math.min(100,n.calories/800*100)}%;background:#e8b86d"></div></div><div class="nutrition-bar-val">${n.calories} קק"ל</div></div>
+      <div class="nutrition-bar-row"><div class="nutrition-bar-label">חלבון</div><div class="nutrition-bar-bg"><div class="nutrition-bar-fill" style="width:${Math.min(100,n.protein/60*100)}%;background:#7ddb7d"></div></div><div class="nutrition-bar-val">${n.protein}g</div></div>
+      <div class="nutrition-bar-row"><div class="nutrition-bar-label">פחמימות</div><div class="nutrition-bar-bg"><div class="nutrition-bar-fill" style="width:${Math.min(100,n.carbs/100*100)}%;background:#7eb0f7"></div></div><div class="nutrition-bar-val">${n.carbs}g</div></div>
+      <div class="nutrition-bar-row"><div class="nutrition-bar-label">שומן</div><div class="nutrition-bar-bg"><div class="nutrition-bar-fill" style="width:${Math.min(100,n.fat/50*100)}%;background:#f0c87d"></div></div><div class="nutrition-bar-val">${n.fat}g</div></div>
+    </div>`:''}
+    <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="add-to-plan-btn" onclick="showAddToPlanDialog('${encodeURI(r.name)}')">📅 הוסף לתכנון שבועי</button>
+    </div>
+  `;
+  document.getElementById('recipeModal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('recipeModal').classList.remove('open'); }
+function closeModalBg(e) { if (e.target === document.getElementById('recipeModal')) closeModal(); }
+
+// PLAN
+const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+const mealSlots = ['🌅 בוקר','☀️ צהריים','🌙 ערב'];
+
+function showAddToPlanDialog(encodedName) {
+  const name = decodeURI(encodedName);
+  const day = prompt(`לאיזה יום? (${days.join(' / ')})`);
+  if (!day || !days.includes(day)) { alert('יום לא תקין'); return; }
+  const meal = prompt(`לאיזה ארוחה? (בוקר / צהריים / ערב)`);
+  if (!meal) return;
+  const mealKey = ['בוקר','צהריים','ערב'].find(m => meal.includes(m));
+  if (!mealKey) { alert('ארוחה לא תקינה'); return; }
+  mealPlan[`${day}__${mealKey}`] = name;
+  localStorage.setItem('mealPlan_v2', JSON.stringify(mealPlan));
+  renderMealPlanTable();
+  closeModal();
+  alert(`✅ ${name}\nנוסף ל${day}, ארוחת ${mealKey}`);
+}
+
+function renderMealPlanTable() {
+  const table = document.getElementById('mealPlanTable');
+  const mealKeys = ['בוקר','צהריים','ערב'];
+  let html = '<thead><tr><th>ארוחה</th>';
+  days.forEach(d => html += `<th>${d}</th>`);
+  html += '</tr></thead><tbody>';
+  const icons = {'בוקר':'🌅','צהריים':'☀️','ערב':'🌙'};
+  mealKeys.forEach(m => {
+    html += `<tr><td style="font-weight:700;color:var(--accent)">${icons[m]} ${m}</td>`;
+    days.forEach(d => {
+      const key = `${d}__${m}`;
+      const val = mealPlan[key];
+      html += val
+        ? `<td class="has-recipe">${val}<span class="plan-remove" onclick="removePlanItem('${key}')">✕ הסר</span></td>`
+        : `<td>—</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+
+function removePlanItem(key) {
+  delete mealPlan[key];
+  localStorage.setItem('mealPlan_v2', JSON.stringify(mealPlan));
+  renderMealPlanTable();
+}
+
+function clearMealPlan() {
+  if (confirm('לנקות את כל תכנון הארוחות?')) {
+    Object.keys(mealPlan).forEach(k => delete mealPlan[k]);
+    localStorage.setItem('mealPlan_v2', '{}');
+    renderMealPlanTable();
+  }
+}
+
+function printMealPlan() { window.print(); }
+
+// MY RECIPES
+function saveMyRecipe() {
+  const name = document.getElementById('newRecipeName').value.trim();
+  if (!name) { alert('אנא הכניסי שם מתכון'); return; }
+  const r = {
+    id: Date.now(), name,
+    category: document.getElementById('newRecipeCategory').value,
+    time: document.getElementById('newRecipeTime').value || '?',
+    difficulty: document.getElementById('newRecipeDiff').value,
+    ingredients: document.getElementById('newRecipeIngredients').value.split('\n').filter(Boolean),
+    steps: document.getElementById('newRecipeSteps').value.split('\n').filter(Boolean),
+    dietary: document.getElementById('newRecipeTags').value.split(',').map(s=>s.trim()).filter(Boolean),
+    tip: document.getElementById('newRecipeTip').value,
+    description: document.getElementById('newRecipeCategory').value,
+  };
+  myRecipes.push(r);
+  localStorage.setItem('myRecipes_v2', JSON.stringify(myRecipes));
+  ['newRecipeName','newRecipeIngredients','newRecipeSteps','newRecipeTags','newRecipeTime','newRecipeTip'].forEach(id => document.getElementById(id).value = '');
+  renderMyRecipes();
+  alert('✅ המתכון נשמר בהצלחה!');
+}
+
+function renderMyRecipes() {
+  const grid = document.getElementById('myRecipesGrid');
+  document.getElementById('myRecipeCount').textContent = `${myRecipes.length} מתכונים`;
+  if (!myRecipes.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">📖</div><p>עדיין לא הוספת מתכונים</p></div>`;
+    return;
+  }
+  grid.innerHTML = '';
+  myRecipes.forEach((r, i) => {
+    const card = document.createElement('div');
+    card.className = 'recipe-card';
+    card.style.animationDelay = (i * 0.07) + 's';
+    card.onclick = () => openRecipeModal(r, 'mine');
+    card.innerHTML = `<div class="card-body">
+      <span class="card-badge badge-mine">📚 המתכון שלי</span>
+      <div class="card-title">${r.name}</div>
+      <div class="card-desc">${r.category}</div>
+      <div class="card-meta">
+        <span>⏱️ ${r.time} דק'</span>
+        <span>👨‍🍳 ${r.difficulty||'?'}</span>
+        <span>🥕 ${r.ingredients.length} מרכיבים</span>
+      </div>
+      ${r.dietary&&r.dietary.length?`<div class="dietary-tags">${r.dietary.map(d=>`<span class="dtag">${d}</span>`).join('')}</div>`:''}
+      <button class="delete-btn" onclick="event.stopPropagation();deleteRecipe(${r.id})">🗑️ מחק</button>
+    </div>`;
+    grid.appendChild(card);
+  });
+}
+
+function deleteRecipe(id) {
+  if (!confirm('למחוק את המתכון?')) return;
+  myRecipes = myRecipes.filter(r => r.id !== id);
+  localStorage.setItem('myRecipes_v2', JSON.stringify(myRecipes));
+  renderMyRecipes();
+}
+
+function showMyRecipesInSearch(search) {
+  const filtered = search ? myRecipes.filter(r =>
+    r.name.includes(search) || r.ingredients.some(i => i.includes(search)) || r.dietary.some(d => d.includes(search))
+  ) : myRecipes;
+  renderRecipes(filtered, 'mine');
+}
+
+// Init
+renderMealPlanTable();
+if (Object.keys(mealPlan).length > 0) document.getElementById('mealPlanSection').style.display = 'block';
+</script>
+</body>
+</html>
