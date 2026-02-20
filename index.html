@@ -138,6 +138,43 @@
   .page { display: none; }
   .page.active { display: block; }
 
+  /* API KEY BAR */
+  .api-key-bar {
+    background: linear-gradient(135deg, #1a1208, #161616);
+    border-bottom: 1px solid #2a2212;
+    padding: 10px 32px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .api-key-bar label { font-size: 0.82rem; color: var(--muted); white-space: nowrap; }
+  .api-key-input {
+    flex: 1;
+    min-width: 220px;
+    max-width: 420px;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 12px;
+    color: var(--text);
+    font-family: 'Heebo', monospace;
+    font-size: 0.82rem;
+    direction: ltr;
+    letter-spacing: 1px;
+  }
+  .api-key-input:focus { outline: none; border-color: var(--accent); }
+  .api-key-status {
+    font-size: 0.78rem;
+    padding: 4px 10px;
+    border-radius: 50px;
+    font-weight: 700;
+  }
+  .api-key-status.ok { background: rgba(92,184,92,0.15); color: #7ddb7d; }
+  .api-key-status.missing { background: rgba(192,57,43,0.15); color: #e74c3c; }
+  .api-key-link { font-size: 0.78rem; color: var(--accent); text-decoration: none; }
+  .api-key-link:hover { text-decoration: underline; }
+
   .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
   .section-header h2 { font-family: 'Frank Ruhl Libre', serif; font-size: 1.2rem; }
 
@@ -175,6 +212,14 @@
     </div>
   </div>
 </header>
+
+<!-- API KEY BAR -->
+<div class="api-key-bar">
+  <label>🔑 Groq API Key:</label>
+  <input class="api-key-input" id="apiKeyInput" type="password" value="YOUR_GROQ_KEY" placeholder="API_HERE" oninput="updateKeyStatus()">
+  <span class="api-key-status missing" id="apiKeyStatus">⚠️ חסר מפתח</span>
+  <a class="api-key-link" href="https://console.groq.com" target="_blank">📋 קבלי מפתח חינם ←</a>
+</div>
 
 <!-- SEARCH PAGE -->
 <div class="page active" id="page-search">
@@ -337,7 +382,20 @@
 </div>
 
 <script>
+function updateKeyStatus() {
+  const v = document.getElementById("apiKeyInput").value.trim();
+  const s = document.getElementById("apiKeyStatus");
+  if (v.startsWith("gsk_") && v.length > 20) {
+    s.textContent = "✅ מפתח תקין";
+    s.className = "api-key-status ok";
+  } else {
+    s.textContent = "⚠️ חסר מפתח";
+    s.className = "api-key-status missing";
+  }
+}
+
 let activeFilters = new Set();
+const GROQ_API_KEY = 'API_HERE';
 let currentMode = 'ai';
 let myRecipes = JSON.parse(localStorage.getItem('myRecipes_v2') || '[]');
 const mealPlan = JSON.parse(localStorage.getItem('mealPlan_v2') || '{}');
@@ -405,14 +463,30 @@ ${maxTime ? `עד ${maxTime} דקות` : ''}
 {"recipes":[{"name":"שם","description":"תיאור + מקור","time":30,"difficulty":"קל","servings":${servings},"dietary":[],"isBest":false,"bestReason":"","source":"מקור","ingredients":["..."],"steps":["..."],"nutrition":{"calories":300,"protein":20,"carbs":35,"fat":10},"tip":"טיפ"}]}`;
   }
 
+  const apiKey = GROQ_API_KEY;
+  if (!apiKey || apiKey === 'API_HERE') {
+    alert('אנא הכניסי את מפתח ה-API של Groq בראש הדף 🔑');
+    btn.disabled = false; btn.textContent = '✨ מצאי לי מתכונים!';
+    document.getElementById('resultsArea').innerHTML = `<div class="empty-state"><div class="icon">🔑</div><p>הכניסי מפתח API של Groq בשורה הירוקה למעלה</p></div>`;
+    return;
+  }
+
   try {
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 3000, messages: [{ role: "user", content: prompt }] })
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + apiKey
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        max_tokens: 3000,
+        messages: [{ role: "user", content: prompt }]
+      })
     });
     const data = await resp.json();
-    const text = data.content.map(i => i.text || '').join('');
+    if (data.error) throw new Error(data.error.message);
+    const text = data.choices[0].message.content;
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) throw new Error('no json');
     const result = JSON.parse(match[0]);
