@@ -215,10 +215,14 @@
 
 <!-- API KEY BAR -->
 <div class="api-key-bar">
-  <label>🔑 Groq API Key:</label>
-  <input class="api-key-input" id="apiKeyInput" type="password" value="YOUR_GROQ_KEY" placeholder="API_HERE" oninput="updateKeyStatus()">
-  <span class="api-key-status missing" id="apiKeyStatus">⚠️ חסר מפתח</span>
-  <a class="api-key-link" href="https://console.groq.com" target="_blank">📋 קבלי מפתח חינם ←</a>
+  <label>🔑 Groq:</label>
+  <input class="api-key-input" id="apiKeyInput" type="password" placeholder="gsk_..." oninput="updateKeyStatus()">
+  <span class="api-key-status missing" id="apiKeyStatus">⚠️ חסר</span>
+  <a class="api-key-link" href="https://console.groq.com" target="_blank">קבלי חינם ←</a>
+  <label style="margin-right:12px">🌐 Tavily:</label>
+  <input class="api-key-input" id="tavilyKeyInput" type="password" placeholder="tvly-..." oninput="updateKeyStatus()">
+  <span class="api-key-status missing" id="tavilyKeyStatus">⚠️ חסר</span>
+  <a class="api-key-link" href="https://app.tavily.com" target="_blank">קבלי חינם ←</a>
 </div>
 
 <!-- SEARCH PAGE -->
@@ -386,16 +390,23 @@ function updateKeyStatus() {
   const v = document.getElementById("apiKeyInput").value.trim();
   const s = document.getElementById("apiKeyStatus");
   if (v.startsWith("gsk_") && v.length > 20) {
-    s.textContent = "✅ מפתח תקין";
-    s.className = "api-key-status ok";
+    s.textContent = "✅ תקין"; s.className = "api-key-status ok";
   } else {
-    s.textContent = "⚠️ חסר מפתח";
-    s.className = "api-key-status missing";
+    s.textContent = "⚠️ חסר"; s.className = "api-key-status missing";
+  }
+  const tv = document.getElementById("tavilyKeyInput").value.trim();
+  const ts = document.getElementById("tavilyKeyStatus");
+  if (tv.startsWith("tvly-") && tv.length > 10) {
+    ts.textContent = "✅ תקין"; ts.className = "api-key-status ok";
+  } else {
+    ts.textContent = "⚠️ חסר"; ts.className = "api-key-status missing";
   }
 }
 
+function getApiKey() { return document.getElementById("apiKeyInput").value.trim(); }
+function getTavilyKey() { return document.getElementById("tavilyKeyInput").value.trim(); }
+
 let activeFilters = new Set();
-const GROQ_API_KEY = 'API_HERE';
 let currentMode = 'ai';
 let myRecipes = JSON.parse(localStorage.getItem('myRecipes_v2') || '[]');
 const mealPlan = JSON.parse(localStorage.getItem('mealPlan_v2') || '{}');
@@ -424,74 +435,148 @@ async function generateRecipes() {
   const ingredients = document.getElementById('ingredientsInput').value.trim();
   if (!ingredients && currentMode !== 'mine') { alert('אנא הכניסי לפחות מרכיב אחד 😊'); return; }
 
-  if (currentMode === 'mine') {
-    showMyRecipesInSearch(ingredients);
+  if (currentMode === 'mine') { showMyRecipesInSearch(ingredients); return; }
+
+  const apiKey = getApiKey();
+  if (!apiKey || !apiKey.startsWith('gsk_')) {
+    alert('אנא הכניסי את מפתח ה-API של Groq 🔑');
+    document.getElementById('resultsArea').innerHTML = `<div class="empty-state"><div class="icon">🔑</div><p>הכניסי מפתח Groq בשורה למעלה</p><p style="margin-top:6px;font-size:0.78rem"><a href="https://console.groq.com" target="_blank" style="color:var(--accent)">קבלי מפתח חינם ←</a></p></div>`;
     return;
   }
 
   const btn = document.getElementById('generateBtn');
-  btn.disabled = true; btn.textContent = '⏳ מחפש מתכונים...';
-  document.getElementById('resultsArea').innerHTML = `<div class="loading-box"><div class="spinner"></div><div>מוצאת מתכונים מיוחדים עבורך...</div></div>`;
-
-  const filters = [...activeFilters].join(', ') || 'ללא הגבלות תזונתיות';
+  btn.disabled = true;
   const servings = document.getElementById('servings').value;
   const maxTime = document.getElementById('maxTime').value;
   const difficulty = document.getElementById('difficulty').value;
   const mealType = document.getElementById('mealType').value;
+  const filters = [...activeFilters].join(', ') || '';
 
-  let prompt = '';
-  if (currentMode === 'ai') {
-    prompt = `אתה שף מומחה ישראלי. המשתמשת יש לה את המרכיבים: ${ingredients}.
-${[...activeFilters].length ? `דרישות תזונתיות חובה: ${filters}` : ''}
+  // ---- WEB MODE: Tavily search first ----
+  if (currentMode === 'web') {
+    const tavilyKey = getTavilyKey();
+    if (!tavilyKey || !tavilyKey.startsWith('tvly-')) {
+      alert('למצב חיפוש AI דרוש מפתח Tavily 🌐\nקבלי חינם ב-app.tavily.com');
+      btn.disabled = false;
+      return;
+    }
+
+    btn.textContent = '🌐 מחפש באינטרנט...';
+    document.getElementById('resultsArea').innerHTML = `<div class="loading-box"><div class="spinner"></div><div>מחפש מתכונים אמיתיים מהאינטרנט... 🌐</div></div>`;
+
+    try {
+      // Step 1: Tavily search
+      const searchQuery = `מתכון ${ingredients}${filters ? ' ' + filters : ''}${maxTime ? ' עד ' + maxTime + ' דקות' : ''}`;
+      const tavilyResp = await fetch("https://api.tavily.com/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          api_key: tavilyKey,
+          query: searchQuery,
+          search_depth: "basic",
+          include_answer: true,
+          max_results: 6,
+          include_domains: ["allrecipes.co.il", "sufganiyot.net", "hafuch.co.il", "hochland.co.il", "tapuz.co.il", "recipes.co.il", "bisli.co.il"]
+        })
+      });
+      const tavilyData = await tavilyResp.json();
+      if (tavilyData.error) throw new Error(tavilyData.error);
+
+      // Build context from Tavily results
+      const webContext = tavilyData.results
+        .slice(0, 5)
+        .map((r, i) => `[${i+1}] ${r.title}\nURL: ${r.url}\n${r.content?.slice(0, 600) || ''}`)
+        .join('\n\n---\n\n');
+
+      // Step 2: Groq processes results
+      btn.textContent = '🤖 מעבד תוצאות...';
+      document.getElementById('resultsArea').innerHTML = `<div class="loading-box"><div class="spinner"></div><div>מעבד תוצאות מהאינטרנט עם AI... 🤖</div></div>`;
+
+      const groqResp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          max_tokens: 4000,
+          temperature: 0.3,
+          messages: [
+            {
+              role: "system",
+              content: "אתה שף ישראלי מומחה. קראת מתכונים מהאינטרנט ועכשיו תסכם אותם ב-JSON מדויק. תמיד תחזיר JSON תקין בלבד ללא markdown."
+            },
+            {
+              role: "user",
+              content: `מצאתי את המתכונים הבאים מהאינטרנט עבור המרכיבים: ${ingredients}
+${filters ? 'דרישות: ' + filters : ''}
+${maxTime ? 'זמן מקסימלי: ' + maxTime + ' דקות' : ''}
+מספר סועדים: ${servings}
+
+תוצאות חיפוש מהאינטרנט:
+${webContext}
+
+בחר 3 מתכונים הכי טובים מהתוצאות (או המצא מבוסס עליהן אם אין מספיק), סמן אחד כ-isBest:true, וציין את ה-source (שם האתר).
+החזר JSON בלבד:
+{"recipes":[{"name":"שם","description":"תיאור","time":30,"difficulty":"קל","servings":${servings},"dietary":[],"isBest":false,"bestReason":"","source":"שם האתר","ingredients":["כמות + מרכיב"],"steps":["שלב מפורט"],"nutrition":{"calories":300,"protein":20,"carbs":35,"fat":10},"tip":"טיפ"}]}`
+            }
+          ]
+        })
+      });
+      const groqData = await groqResp.json();
+      if (groqData.error) throw new Error(groqData.error.message);
+      const text = groqData.choices[0].message.content;
+      const match = text.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('תגובה לא תקינה');
+      const result = JSON.parse(match[0]);
+      lastRecipes = result.recipes;
+      renderRecipes(result.recipes, 'web');
+      document.getElementById('mealPlanSection').style.display = 'block';
+      renderMealPlanTable();
+
+    } catch(e) {
+      document.getElementById('resultsArea').innerHTML = `<div class="empty-state"><div class="icon">😕</div><p>שגיאה בחיפוש, נסי שוב!</p><p style="font-size:0.72rem;margin-top:6px;color:#555">${e.message}</p></div>`;
+    }
+    btn.disabled = false; btn.textContent = '✨ מצאי לי מתכונים!';
+    return;
+  }
+
+  // ---- AI INVENTION MODE ----
+  btn.textContent = '⏳ ממציאה מתכונים...';
+  document.getElementById('resultsArea').innerHTML = `<div class="loading-box"><div class="spinner"></div><div>ממציאה מתכונים מיוחדים עבורך... 🤖</div></div>`;
+
+  const prompt = `אתה שף מומחה ישראלי עם ניסיון של 20 שנה. המשתמשת יש לה את המרכיבים: ${ingredients}.
+${filters ? `דרישות תזונתיות חובה: ${filters}` : ''}
 ${maxTime ? `זמן הכנה מקסימלי: ${maxTime} דקות` : ''}
 ${difficulty ? `רמת קושי רצויה: ${difficulty}` : ''}
 ${mealType ? `סוג ארוחה: ${mealType}` : ''}
 מספר סועדים: ${servings}
 
-המצא 3 מתכונים מקוריים ויצירתיים שאפשר להכין מהמרכיבים (מותר להוסיף תבלינים בסיסיים).
-סמן אחד כ-isBest:true וכתוב bestReason למה הוא הכי מומלץ.
-החזר JSON בלבד (בלי טקסט אחר, בלי markdown):
-{"recipes":[{"name":"שם","description":"תיאור מפתה","time":30,"difficulty":"קל","servings":${servings},"dietary":[],"isBest":false,"bestReason":"","ingredients":["..."],"steps":["..."],"nutrition":{"calories":350,"protein":25,"carbs":30,"fat":12},"tip":"טיפ של שף"}]}`;
-  } else {
-    prompt = `אתה שף ישראלי. ספקי 3 מתכונים מוכרים ופופולריים עם המרכיבים: ${ingredients}.
-${[...activeFilters].length ? `דרישות: ${filters}` : ''}
-${maxTime ? `עד ${maxTime} דקות` : ''}
-מספר סועדים: ${servings}
-
-סמן אחד כ-isBest:true עם bestReason. ציני source (שם האתר/הספר).
+המצא 3 מתכונים מקוריים, טעימים ומעשיים. הוראות הכנה חייבות להיות מפורטות ומדויקות.
+סמן אחד כ-isBest:true עם bestReason.
 החזר JSON בלבד:
-{"recipes":[{"name":"שם","description":"תיאור + מקור","time":30,"difficulty":"קל","servings":${servings},"dietary":[],"isBest":false,"bestReason":"","source":"מקור","ingredients":["..."],"steps":["..."],"nutrition":{"calories":300,"protein":20,"carbs":35,"fat":10},"tip":"טיפ"}]}`;
-  }
-
-  const apiKey = GROQ_API_KEY;
-  if (!apiKey || apiKey === 'API_HERE') {
-    alert('אנא הכניסי את מפתח ה-API של Groq בראש הדף 🔑');
-    btn.disabled = false; btn.textContent = '✨ מצאי לי מתכונים!';
-    document.getElementById('resultsArea').innerHTML = `<div class="empty-state"><div class="icon">🔑</div><p>הכניסי מפתח API של Groq בשורה הירוקה למעלה</p></div>`;
-    return;
-  }
+{"recipes":[{"name":"שם","description":"תיאור מפתה","time":30,"difficulty":"קל","servings":${servings},"dietary":[],"isBest":false,"bestReason":"","ingredients":["כמות + מרכיב"],"steps":["שלב מפורט"],"nutrition":{"calories":350,"protein":25,"carbs":30,"fat":12},"tip":"טיפ מקצועי"}]}`;
 
   try {
     const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + apiKey
-      },
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
       body: JSON.stringify({
         model: "llama-3.3-70b-versatile",
-        max_tokens: 3000,
-        messages: [{ role: "user", content: prompt }]
+        max_tokens: 4000,
+        temperature: 0.7,
+        messages: [
+          { role: "system", content: "אתה שף מומחה ישראלי. תמיד תחזיר JSON תקין בלבד ללא markdown." },
+          { role: "user", content: prompt }
+        ]
       })
     });
     const data = await resp.json();
     if (data.error) throw new Error(data.error.message);
     const text = data.choices[0].message.content;
     const match = text.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('no json');
+    if (!match) throw new Error('תגובה לא תקינה');
     const result = JSON.parse(match[0]);
     lastRecipes = result.recipes;
-    renderRecipes(result.recipes, currentMode);
+    renderRecipes(result.recipes, 'ai');
     document.getElementById('mealPlanSection').style.display = 'block';
     renderMealPlanTable();
   } catch(e) {
