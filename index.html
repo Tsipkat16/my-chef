@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🍽️ מתכון בקליק</title>
+<title>מתכון בקליק</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&family=Frank+Ruhl+Libre:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -263,19 +264,19 @@
     <button class="generate-btn" id="generateBtn" onclick="generateRecipes()">✨ מצאי לי מתכונים!</button>
   </div>
 
-  <!-- MODE TABS -->
+  <!-- MODE TABS - multi select -->
   <div class="mode-tabs">
-    <button class="mode-tab active" id="tab-ai" onclick="setMode('ai',this)">
+    <button class="mode-tab active" id="tab-ai" onclick="toggleMode('ai',this)">
       <span class="tab-icon">🤖</span>
       <span>המצאת AI</span>
       <span class="tab-sub">מתכון מקורי</span>
     </button>
-    <button class="mode-tab" id="tab-web" onclick="setMode('web',this)">
+    <button class="mode-tab" id="tab-web" onclick="toggleMode('web',this)">
       <span class="tab-icon">🌐</span>
       <span>חיפוש AI</span>
       <span class="tab-sub">ממתכונים ידועים</span>
     </button>
-    <button class="mode-tab" id="tab-myrecipes" onclick="setMode('mine',this)">
+    <button class="mode-tab" id="tab-myrecipes" onclick="toggleMode('mine',this)">
       <span class="tab-icon">📚</span>
       <span>המתכונים שלי</span>
       <span class="tab-sub">ספריית המתכונים</span>
@@ -417,29 +418,132 @@ function toggleFilter(btn, name) {
   btn.classList.toggle('active');
 }
 
-function setMode(mode, btn) {
-  currentMode = mode;
-  document.querySelectorAll('.mode-tab').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  // Restore previous results for this mode, or show empty state
-  if (modeResults[mode]) {
-    renderRecipes(modeResults[mode].recipes, mode);
+// Multi-select modes
+const activeModes = new Set(['ai']);
+
+function toggleMode(mode, btn) {
+  if (activeModes.has(mode)) {
+    if (activeModes.size === 1) return; // keep at least one
+    activeModes.delete(mode);
+    btn.classList.remove('active');
   } else {
-    document.getElementById('resultsArea').innerHTML = `<div class="empty-state"><div class="icon">🍳</div><p>הכניסי מרכיבים ולחצי על "מצאי לי מתכונים"</p></div>`;
+    activeModes.add(mode);
+    btn.classList.add('active');
   }
+}
+
+async function runWebMode(ingredients, dishRequest, filters, maxTime, servings, apiKey) {
+  const serperKey = getSerperKey();
+  if (!serperKey || serperKey.length < 10) throw new Error('חסר מפתח Serper');
+
+  const searchQuery = `מתכון ${dishRequest || ingredients}`;
+  const serperResp = await fetch("https://google.serper.dev/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-API-KEY": serperKey },
+    body: JSON.stringify({ q: searchQuery, gl: "il", hl: "iw", num: 6 })
+  });
+  const serperData = await serperResp.json();
+  if (serperData.error) throw new Error(serperData.error);
+
+  const urls = (serperData.organic || []).slice(0, 8).map(r => r.link).filter(Boolean);
+  const snippets = (serperData.organic || []).slice(0, 8).map(r => ({ url: r.link, text: `${r.title}\n${r.snippet || ''}` }));
+  if (!urls.length) throw new Error('לא נמצאו תוצאות');
+
+  const fetchWithTimeout = (url, ms = 8000) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+    return fetch(`https://r.jina.ai/${url}`, { signal: controller.signal })
+      .then(r => { clearTimeout(timer); if (!r.ok) throw new Error(`${r.status}`); return r.text(); })
+      .then(text => ({ url, text: text.slice(0, 2500) }))
+      .catch(() => null);
+  };
+
+  const jinaResults = await Promise.all(urls.map(url => fetchWithTimeout(url)));
+  const pageContents = jinaResults.map((res, i) =>
+    res ? res : { url: urls[i], text: snippets[i]?.text || '' }
+  ).filter(p => p.text.length > 50);
+
+  if (!pageContents.length) throw new Error('לא ניתן לקרוא את תוכן האתרים');
+  const webContext = pageContents.map((p, i) => `[${i+1}] URL: ${p.url}\n${p.text}`).join('\n\n---\n\n');
+
+  const filterInstructions = [
+    ingredients ? `מרכיבים זמינים: ${ingredients}. תן אחוז התאמה.` : '',
+    filters ? `דרישות תזונתיות: ${filters}. אם לא עומד — אל תכלול.` : '',
+    maxTime ? `זמן מקסימלי: ${maxTime} דקות. מתכונים ארוכים יותר — אל תכלול.` : '',
+  ].filter(Boolean).join('\n');
+
+  const groqResp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      max_tokens: 4500,
+      temperature: 0.1,
+      messages: [
+        {
+          role: "system",
+          content: `אתה עוזר שמחלץ ומסנן מתכונים מעמודי אינטרנט. חוקים: 1. חלץ מתכון כמו שהוא — אל תשנה מילה. 2. מותר לשנות רק כמויות לפי מספר סועדים (${servings}). 3. דרישות תזונתיות לא מתקיימות — פסול לגמרי. 4. תן ingredientMatch 0-100. 5. זהה תגי dietary מהמתכון עצמו (טבעוני/צמחוני/ללא גלוטן וכו'). 6. JSON בלבד ללא markdown.`
+        },
+        {
+          role: "user",
+          content: `חלץ מתכונים מהתוכן הבא.\n${filterInstructions}\nסועדים: ${servings}\n\n${webContext}\n\nהחזר עד 3 מתכונים. סמן isBest:true לאחד.\nJSON בלבד:\n{"recipes":[{"name":"","description":"","time":30,"difficulty":"קל","servings":${servings},"dietary":["טבעוני"],"isBest":false,"bestReason":"","source":"","ingredientMatch":80,"ingredients":[""],"steps":[""],"nutrition":{"calories":300,"protein":20,"carbs":35,"fat":10},"tip":""}]}`
+        }
+      ]
+    })
+  });
+  const groqData = await groqResp.json();
+  if (groqData.error) throw new Error(groqData.error.message);
+  const text = groqData.choices[0].message.content;
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('תגובה לא תקינה');
+  return JSON.parse(match[0]).recipes || [];
+}
+
+async function runAiMode(ingredients, dishRequest, filters, maxTime, difficulty, mealType, servings, apiKey) {
+  const prompt = `אתה שף מומחה ישראלי עם ניסיון של 20 שנה.
+${dishRequest ? 'המשתמש רוצה להכין: ' + dishRequest : ''}
+${ingredients ? 'מרכיבים זמינים: ' + ingredients : ''}
+${filters ? `דרישות תזונתיות חובה: ${filters}` : ''}
+${maxTime ? `זמן הכנה מקסימלי: ${maxTime} דקות` : ''}
+${difficulty ? `רמת קושי רצויה: ${difficulty}` : ''}
+${mealType ? `סוג ארוחה: ${mealType}` : ''}
+מספר סועדים: ${servings}
+
+המצא 3 מתכונים מקוריים. זהה את תגי dietary המתאימים (טבעוני/צמחוני/ללא גלוטן/כשר וכו') לכל מתכון.
+סמן אחד כ-isBest:true עם bestReason.
+החזר JSON בלבד:
+{"recipes":[{"name":"","description":"","time":30,"difficulty":"קל","servings":${servings},"dietary":["טבעוני"],"isBest":false,"bestReason":"","ingredients":[""],"steps":[""],"nutrition":{"calories":350,"protein":25,"carbs":30,"fat":12},"tip":""}]}`;
+
+  const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      max_tokens: 4000,
+      temperature: 0.7,
+      messages: [
+        { role: "system", content: "אתה שף מומחה ישראלי. תמיד תחזיר JSON תקין בלבד ללא markdown." },
+        { role: "user", content: prompt }
+      ]
+    })
+  });
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error.message);
+  const text = data.choices[0].message.content;
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('תגובה לא תקינה');
+  return JSON.parse(match[0]).recipes || [];
 }
 
 async function generateRecipes() {
   const ingredients = document.getElementById('ingredientsInput').value.trim();
   const dishRequest = document.getElementById('dishInput').value.trim();
-  if (!ingredients && !dishRequest && currentMode !== 'mine') { alert('אנא הכניסי מה תרצי להכין או מרכיבים 😊'); return; }
-
-  if (currentMode === 'mine') { showMyRecipesInSearch(ingredients); return; }
+  if (!ingredients && !dishRequest && !activeModes.has('mine')) { alert('אנא הכניסי מה תרצי להכין או מרכיבים 😊'); return; }
 
   const apiKey = getApiKey();
-  if (!apiKey || !apiKey.startsWith('gsk_')) {
+  if ((activeModes.has('ai') || activeModes.has('web')) && (!apiKey || !apiKey.startsWith('gsk_'))) {
     alert('אנא הכניסי את מפתח ה-API של Groq 🔑');
-    document.getElementById('resultsArea').innerHTML = `<div class="empty-state"><div class="icon">🔑</div><p>הכניסי מפתח Groq בשורה למעלה</p><p style="margin-top:6px;font-size:0.78rem"><a href="https://console.groq.com" target="_blank" style="color:var(--accent)">קבלי מפתח חינם ←</a></p></div>`;
+    document.getElementById('resultsArea').innerHTML = `<div class="empty-state"><div class="icon">🔑</div><p>הכניסי מפתח Groq בשורה למעלה</p></div>`;
     return;
   }
 
@@ -451,163 +555,55 @@ async function generateRecipes() {
   const mealType = document.getElementById('mealType').value;
   const filters = [...activeFilters].join(', ') || '';
 
-  // ---- WEB MODE: Serper search + Jina Reader ----
-  if (currentMode === 'web') {
-    const serperKey = getSerperKey();
-    if (!serperKey || serperKey.length < 10) {
-      alert('למצב חיפוש AI דרוש מפתח Serper 🌐\nקבלי 2500 חיפושים חינם ב-serper.dev');
-      btn.disabled = false;
-      return;
-    }
+  document.getElementById('resultsArea').innerHTML = `<div class="loading-box"><div class="spinner"></div><div>מחפש מתכונים...</div></div>`;
 
-    btn.textContent = '🌐 מחפש באינטרנט...';
-    document.getElementById('resultsArea').innerHTML = `<div class="loading-box"><div class="spinner"></div><div>מחפש מתכונים... 🌐</div></div>`;
+  const allRecipes = [];
+  let bestPicked = false;
 
-    try {
-      // Step 1: Search only by dish name (not ingredients - they're for filtering later)
-      const searchQuery = `מתכון ${dishRequest || ingredients}`;
-      const serperResp = await fetch("https://google.serper.dev/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-API-KEY": serperKey },
-        body: JSON.stringify({ q: searchQuery, gl: "il", hl: "iw", num: 6 })
-      });
-      const serperData = await serperResp.json();
-      if (serperData.error) throw new Error(serperData.error);
-
-      const urls = (serperData.organic || []).slice(0, 8).map(r => r.link).filter(Boolean);
-      const snippets = (serperData.organic || []).slice(0, 8).map(r => ({ url: r.link, text: `${r.title}\n${r.snippet || ''}` }));
-      if (!urls.length) throw new Error('לא נמצאו תוצאות');
-
-      // Step 2: Fetch page content via Jina Reader — with timeout + fallback to snippet
-      btn.textContent = '📄 קורא אתרים...';
-      document.getElementById('resultsArea').innerHTML = `<div class="loading-box"><div class="spinner"></div><div>קורא תוכן מהאתרים... 📄</div></div>`;
-
-      const fetchWithTimeout = (url, ms = 8000) => {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), ms);
-        return fetch(`https://r.jina.ai/${url}`, { signal: controller.signal })
-          .then(r => { clearTimeout(timer); if (!r.ok) throw new Error(`${r.status}`); return r.text(); })
-          .then(text => ({ url, text: text.slice(0, 2500), source: 'jina' }))
-          .catch(() => null);
-      };
-
-      const jinaResults = await Promise.all(urls.map(url => fetchWithTimeout(url)));
-
-      // Merge: use jina content if available, else fall back to serper snippet
-      const pageContents = jinaResults.map((res, i) =>
-        res ? res : { url: urls[i], text: snippets[i]?.text || '', source: 'snippet' }
-      ).filter(p => p.text.length > 50);
-
-      if (!pageContents.length) throw new Error('לא ניתן לקרוא את תוכן האתרים');
-
-      const webContext = pageContents
-        .map((p, i) => `[${i+1}] URL: ${p.url}\n${p.text}`)
-        .join('\n\n---\n\n');
-
-      // Step 3: Groq extracts recipes, filters by ingredients & dietary, adjusts servings only
-      btn.textContent = '🤖 מסנן ומעבד...';
-      document.getElementById('resultsArea').innerHTML = `<div class="loading-box"><div class="spinner"></div><div>בודק התאמה למרכיבים ודרישות... 🤖</div></div>`;
-
-      const filterInstructions = [
-        ingredients ? `מרכיבים זמינים למשתמש: ${ingredients}. בדוק אם המתכון ניתן להכנה עם המרכיבים האלה (לא חייב להיות מדויק, אחוז התאמה).` : '',
-        filters ? `דרישות תזונתיות: ${filters}. אם המתכון לא עומד בדרישה — אל תכלול אותו בכלל.` : '',
-        maxTime ? `זמן מקסימלי: ${maxTime} דקות. מתכונים שלוקחים יותר — אל תכלול.` : '',
-      ].filter(Boolean).join('\n');
-
-      const groqResp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          max_tokens: 4500,
-          temperature: 0.1,
-          messages: [
-            {
-              role: "system",
-              content: `אתה עוזר שמחלץ ומסנן מתכונים מתוך עמודי אינטרנט.
-חוקים קשיחים:
-1. חלץ את המתכון כמו שהוא מהאתר — אל תשנה שום מילה, מרכיב, שלב או טיפ.
-2. הדבר היחיד שמותר לשנות: כמויות — אם המתכון ל-X סועדים והמשתמש רוצה ${servings}, כפל/חלק את הכמויות בהתאם.
-3. אם יש דרישות תזונתיות (טבעוני, ללא גלוטן וכו') ומתכון לא עומד בהן — אל תכלול אותו בכלל.
-4. אם יש מרכיבים זמינים — תן אחוז התאמה (ingredientMatch: 0-100) כמה מרכיבי המתכון קיימים. אל תפסול מתכון בגלל מרכיבים.
-5. תמיד תחזיר JSON תקין בלבד ללא markdown.`
-            },
-            {
-              role: "user",
-              content: `חלץ מתכונים מהתוכן הבא.
-${filterInstructions}
-מספר סועדים רצוי: ${servings}
-
-תוכן עמודי האתרים:
-${webContext}
-
-החזר עד 3 מתכונים שעברו סינון. סמן אחד כ-isBest:true.
-החזר JSON בלבד:
-{"recipes":[{"name":"שם המתכון מהאתר","description":"תיאור מהאתר","time":30,"difficulty":"קל","servings":${servings},"dietary":[],"isBest":false,"bestReason":"","source":"שם האתר","ingredientMatch":85,"ingredients":["כמות מותאמת + מרכיב כפי שכתוב באתר"],"steps":["שלב בדיוק כפי שכתוב באתר"],"nutrition":{"calories":300,"protein":20,"carbs":35,"fat":10},"tip":"טיפ מהאתר"}]}`
-            }
-          ]
-        })
-      });
-      const groqData = await groqResp.json();
-      if (groqData.error) throw new Error(groqData.error.message);
-      const text = groqData.choices[0].message.content;
-      const match = text.match(/\{[\s\S]*\}/);
-      if (!match) throw new Error('תגובה לא תקינה');
-      const result = JSON.parse(match[0]);
-      lastRecipes = result.recipes;
-      modeResults['web'] = { recipes: result.recipes };
-      renderRecipes(result.recipes, 'web');
-
-    } catch(e) {
-      document.getElementById('resultsArea').innerHTML = `<div class="empty-state"><div class="icon">😕</div><p>שגיאה בחיפוש, נסי שוב!</p><p style="font-size:0.72rem;margin-top:6px;color:#555">${e.message}</p></div>`;
-    }
-    btn.disabled = false; btn.textContent = '✨ מצאי לי מתכונים!';
-    return;
+  function addAndRender(recipes, mode) {
+    recipes.forEach(r => {
+      if (r.isBest && !bestPicked) {
+        bestPicked = true;
+      } else {
+        r.isBest = false;
+        r.bestReason = '';
+      }
+      allRecipes.push({ ...r, _mode: mode });
+    });
+    if (allRecipes.length > 0) renderRecipes(allRecipes, 'multi');
   }
 
-  // ---- AI INVENTION MODE ----
-  btn.textContent = '⏳ ממציאה מתכונים...';
-  document.getElementById('resultsArea').innerHTML = `<div class="loading-box"><div class="spinner"></div><div>ממציאה מתכונים מיוחדים עבורך... 🤖</div></div>`;
+  const tasks = [];
+  if (activeModes.has('mine')) tasks.push('mine');
+  if (activeModes.has('web')) tasks.push('web');
+  if (activeModes.has('ai')) tasks.push('ai');
 
-  const prompt = `אתה שף מומחה ישראלי עם ניסיון של 20 שנה.
-${dishRequest ? 'המשתמש רוצה להכין: ' + dishRequest : ''}
-${ingredients ? 'מרכיבים זמינים: ' + ingredients : ''}
-${filters ? `דרישות תזונתיות חובה: ${filters}` : ''}
-${maxTime ? `זמן הכנה מקסימלי: ${maxTime} דקות` : ''}
-${difficulty ? `רמת קושי רצויה: ${difficulty}` : ''}
-${mealType ? `סוג ארוחה: ${mealType}` : ''}
-מספר סועדים: ${servings}
+  for (const mode of tasks) {
+    if (mode === 'mine') {
+      const filtered = ingredients || dishRequest
+        ? myRecipes.filter(r => r.name.includes(dishRequest || ingredients) || r.ingredients.some(i => i.includes(ingredients)))
+        : myRecipes;
+      addAndRender(filtered, 'mine');
+      continue;
+    }
+    try {
+      btn.textContent = mode === 'web' ? '🌐 מחפש באינטרנט...' : '🤖 ממציא מתכונים...';
+      let recipes = [];
+      if (mode === 'web') {
+        recipes = await runWebMode(ingredients, dishRequest, filters, maxTime, servings, apiKey);
+        modeResults['web'] = { recipes };
+      } else {
+        recipes = await runAiMode(ingredients, dishRequest, filters, maxTime, difficulty, mealType, servings, apiKey);
+        modeResults['ai'] = { recipes };
+      }
+      addAndRender(recipes, mode);
+    } catch(e) {
+      console.error(mode, e.message);
+    }
+  }
 
-המצא 3 מתכונים מקוריים, טעימים ומעשיים. הוראות הכנה חייבות להיות מפורטות ומדויקות.
-סמן אחד כ-isBest:true עם bestReason.
-החזר JSON בלבד:
-{"recipes":[{"name":"שם","description":"תיאור מפתה","time":30,"difficulty":"קל","servings":${servings},"dietary":[],"isBest":false,"bestReason":"","ingredients":["כמות + מרכיב"],"steps":["שלב מפורט"],"nutrition":{"calories":350,"protein":25,"carbs":30,"fat":12},"tip":"טיפ מקצועי"}]}`;
-
-  try {
-    const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        max_tokens: 4000,
-        temperature: 0.7,
-        messages: [
-          { role: "system", content: "אתה שף מומחה ישראלי. תמיד תחזיר JSON תקין בלבד ללא markdown." },
-          { role: "user", content: prompt }
-        ]
-      })
-    });
-    const data = await resp.json();
-    if (data.error) throw new Error(data.error.message);
-    const text = data.choices[0].message.content;
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('תגובה לא תקינה');
-    const result = JSON.parse(match[0]);
-    lastRecipes = result.recipes;
-    modeResults['ai'] = { recipes: result.recipes };
-    renderRecipes(result.recipes, 'ai');
-  } catch(e) {
-    document.getElementById('resultsArea').innerHTML = `<div class="empty-state"><div class="icon">😕</div><p>אירעה שגיאה, נסי שוב!</p><p style="font-size:0.72rem;margin-top:6px;color:#555">${e.message}</p></div>`;
+  if (!allRecipes.length) {
+    document.getElementById('resultsArea').innerHTML = `<div class="empty-state"><div class="icon">😕</div><p>לא נמצאו מתכונים</p></div>`;
   }
   btn.disabled = false; btn.textContent = '✨ מצאי לי מתכונים!';
 }
@@ -623,14 +619,15 @@ function renderRecipes(recipes, mode) {
   const grid = document.createElement('div');
   grid.className = 'results-grid';
   valid.forEach((r, i) => {
+    const rMode = r._mode || mode;
     const card = document.createElement('div');
     card.className = 'recipe-card';
     card.style.animationDelay = (i * 0.1) + 's';
-    card.onclick = () => openRecipeModal(r, mode);
+    card.onclick = () => openRecipeModal(r, rMode);
     card.innerHTML = `<div class="card-body">
       ${r.isBest ? '<div class="best-badge">⭐ ההמלצה שלנו</div><br>' : ''}
-      <span class="card-badge ${bm[mode]}">${bl[mode]}</span>
-      ${mode === 'web' && r.ingredientMatch != null ? `<span style="font-size:0.72rem;padding:3px 8px;border-radius:50px;font-weight:700;margin-right:4px;background:${r.ingredientMatch>=80?'rgba(92,184,92,0.15)':r.ingredientMatch>=50?'rgba(232,184,109,0.15)':'rgba(192,57,43,0.15)'};color:${r.ingredientMatch>=80?'#7ddb7d':r.ingredientMatch>=50?'var(--accent)':'#e74c3c'}">🥕 ${r.ingredientMatch}% התאמה</span>` : ''}
+      <span class="card-badge ${bm[rMode]}">${bl[rMode]}</span>
+      ${rMode === 'web' && r.ingredientMatch != null ? `<span style="font-size:0.72rem;padding:3px 8px;border-radius:50px;font-weight:700;margin-right:4px;background:${r.ingredientMatch>=80?'rgba(92,184,92,0.15)':r.ingredientMatch>=50?'rgba(232,184,109,0.15)':'rgba(192,57,43,0.15)'};color:${r.ingredientMatch>=80?'#7ddb7d':r.ingredientMatch>=50?'var(--accent)':'#e74c3c'}">🥕 ${r.ingredientMatch}% התאמה</span>` : ''}
       <div class="card-title">${r.name}</div>
       <div class="card-desc">${r.description || ''}</div>
       <div class="card-meta">
