@@ -728,6 +728,8 @@ function updateKeyStatus() {
   else { ss.textContent = "❌ לא תקין"; ss.className = "api-key-status invalid"; }
   if (v) localStorage.setItem('groq_key', v);
   if (sv) localStorage.setItem('serper_key', sv);
+  // Sync API keys to cloud if logged in
+  if (window._scheduleSync) window._scheduleSync();
 }
 
 function copyKey(inputId, btnId) {
@@ -1940,16 +1942,18 @@ async function loadFromFirestore(uid) {
     const snap = await getDoc(doc(db, 'users', uid));
     if (snap.exists()) {
       const data = snap.data();
-      // Merge: prefer Firestore over localStorage, but keep localStorage if Firestore is empty
       if (data.favorites?.length)   { window.favorites   = data.favorites;   localStorage.setItem('favorites_v1', JSON.stringify(data.favorites)); }
       if (data.ratings && Object.keys(data.ratings).length) { window.ratings = data.ratings; localStorage.setItem('ratings_v1', JSON.stringify(data.ratings)); }
       if (data.cookedLog?.length)   { window.cookedLog   = data.cookedLog;   localStorage.setItem('cooked_log_v1', JSON.stringify(data.cookedLog)); }
       if (data.recipeNotes && Object.keys(data.recipeNotes).length) { window.recipeNotes = data.recipeNotes; localStorage.setItem('recipe_notes_v1', JSON.stringify(data.recipeNotes)); }
       if (data.myRecipes?.length)   { window.myRecipes   = data.myRecipes;   localStorage.setItem('myRecipes_v2', JSON.stringify(data.myRecipes)); }
+      // Load API keys
+      if (data.groqKey)   { localStorage.setItem('groq_key', data.groqKey);   document.getElementById('apiKeyInput').value   = data.groqKey; }
+      if (data.serperKey) { localStorage.setItem('serper_key', data.serperKey); document.getElementById('serperKeyInput').value = data.serperKey; }
+      if (data.groqKey || data.serperKey) window.updateKeyStatus();
       updateBadges();
       window.showToast('☁️ הנתונים נטענו מהענן!');
     } else {
-      // First login — push localStorage data to Firestore
       await saveToFirestore(uid);
     }
   } catch(e) {
@@ -1960,12 +1964,16 @@ async function loadFromFirestore(uid) {
 async function saveToFirestore(uid) {
   if (!uid) return;
   try {
+    const groqKey   = localStorage.getItem('groq_key')   || '';
+    const serperKey = localStorage.getItem('serper_key') || '';
     await setDoc(doc(db, 'users', uid), {
       favorites:   window.favorites   || [],
       ratings:     window.ratings     || {},
       cookedLog:   window.cookedLog   || [],
       recipeNotes: window.recipeNotes || {},
       myRecipes:   window.myRecipes   || [],
+      groqKey,
+      serperKey,
       updatedAt: serverTimestamp()
     }, { merge: true });
   } catch(e) {
@@ -1984,7 +1992,10 @@ function setupFirestoreSync(uid) {
     if (data.cookedLog)   { window.cookedLog   = data.cookedLog;   localStorage.setItem('cooked_log_v1', JSON.stringify(data.cookedLog));     changed = true; }
     if (data.recipeNotes) { window.recipeNotes = data.recipeNotes; localStorage.setItem('recipe_notes_v1', JSON.stringify(data.recipeNotes)); changed = true; }
     if (data.myRecipes)   { window.myRecipes   = data.myRecipes;   localStorage.setItem('myRecipes_v2', JSON.stringify(data.myRecipes));       changed = true; }
-    if (changed) updateBadges();
+    // Sync API keys — only fill if field is currently empty
+    if (data.groqKey   && !document.getElementById('apiKeyInput').value)   { document.getElementById('apiKeyInput').value   = data.groqKey;   localStorage.setItem('groq_key', data.groqKey); changed = true; }
+    if (data.serperKey && !document.getElementById('serperKeyInput').value) { document.getElementById('serperKeyInput').value = data.serperKey; localStorage.setItem('serper_key', data.serperKey); changed = true; }
+    if (changed) { updateBadges(); if (window.updateKeyStatus) window.updateKeyStatus(); }
   });
 }
 
