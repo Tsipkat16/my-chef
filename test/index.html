@@ -904,8 +904,16 @@ function buildTimerBox(suggestedMinutes) {
 }
 
 function setTimerMins(m) {
-  stopTimer();
-  document.getElementById('timerManualMins').value = m;
+  // Stop interval without wiping the display to 00:00
+  clearInterval(timerInterval);
+  timerRunning = false;
+  const btn = document.getElementById('timerStartBtn');
+  if (btn) btn.textContent = '▶ התחל';
+  const disp = document.getElementById('timerDisplay');
+  if (disp) disp.classList.remove('done', 'running');
+  // Set new time
+  const input = document.getElementById('timerManualMins');
+  if (input) input.value = m;
   timerSeconds = m * 60;
   updateTimerDisplay();
 }
@@ -1310,7 +1318,7 @@ async function runWebMode(ingredients, dishRequest, filters, maxTime, servings, 
       model: "llama-3.3-70b-versatile", max_tokens: 4500, temperature: 0.1,
       messages: [
         { role: "system", content: `אתה עוזר שמחלץ ומסנן מתכונים מעמודי אינטרנט. חוקים: 1. חלץ מתכון כמו שהוא. 2. מותר לשנות כמויות לפי סועדים (${servings}). 3. JSON בלבד ללא markdown.` },
-        { role: "user", content: `חלץ מתכונים מהתוכן הבא.\n${filterInstructions}\nסועדים: ${servings}\n\n${webContext}\n\nהחזר עד 3 מתכונים. סמן isBest:true לאחד.\nJSON בלבד:\n{"recipes":[{"name":"","description":"","time":30,"difficulty":"קל","servings":${servings},"dietary":[],"isBest":false,"bestReason":"","source":"","ingredientMatch":80,"ingredients":[""],"steps":[""],"nutrition":{"calories":300,"protein":20,"carbs":35,"fat":10},"tip":""}]}` }
+        { role: "user", content: `חלץ מתכונים מהתוכן הבא.\n${filterInstructions}\nסועדים: ${servings}\n\nחשוב: שדה "time" — רק אם מופיע במפורש בדף. אחרת תכתוב null. אל תמציא זמן!\n\n${webContext}\n\nהחזר עד 3 מתכונים. סמן isBest:true לאחד.\nJSON בלבד:\n{"recipes":[{"name":"","description":"","time":null,"difficulty":"קל","servings":${servings},"dietary":[],"isBest":false,"bestReason":"","source":"","ingredientMatch":80,"ingredients":[""],"steps":[""],"nutrition":{"calories":300,"protein":20,"carbs":35,"fat":10},"tip":""}]}` }
       ]
     })
   });
@@ -1413,8 +1421,9 @@ ${mealType ? `סוג ארוחה: ${mealType}` : ''}
 ${tasteCtx}
 המצא 3 מתכונים מקוריים. זהה תגי dietary. סמן אחד כ-isBest:true עם bestReason.
 ${tasteCtx ? 'בחר את isBest לפי התאמה לפרופיל הטעם האישי.' : ''}
+חשוב: שדה "time" — רק אם אתה יודע בוודאות את זמן ההכנה. אחרת תכתוב null. אל תמציא זמן!
 החזר JSON בלבד:
-{"recipes":[{"name":"","description":"","time":30,"difficulty":"קל","servings":${servings},"dietary":[],"isBest":false,"bestReason":"","ingredients":[""],"steps":[""],"nutrition":{"calories":350,"protein":25,"carbs":30,"fat":12},"tip":""}]}`;
+{"recipes":[{"name":"","description":"","time":null,"difficulty":"קל","servings":${servings},"dietary":[],"isBest":false,"bestReason":"","ingredients":[""],"steps":[""],"nutrition":{"calories":350,"protein":25,"carbs":30,"fat":12},"tip":""}]}`;
   const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
