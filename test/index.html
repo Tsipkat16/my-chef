@@ -1119,6 +1119,9 @@ async function runWebMode(ingredients, dishRequest, filters, maxTime, servings, 
     headers: { "Content-Type": "application/json", "X-API-KEY": serperKey },
     body: JSON.stringify({ q: searchQuery, gl: "il", hl: "iw", num: 6 })
   });
+  if (serperResp.status === 403) throw new Error('מפתח Serper לא תקין או פג תוקף — בדוק את המפתח ב-serper.dev');
+  if (serperResp.status === 429) throw new Error('חרגת ממכסת הבקשות של Serper — נסה שוב מאוחר יותר');
+  if (!serperResp.ok) throw new Error('שגיאה מ-Serper: ' + serperResp.status);
   const serperData = await serperResp.json();
   if (serperData.error) throw new Error(serperData.error);
   const urls = (serperData.organic || []).slice(0, 8).map(r => r.link).filter(Boolean);
@@ -1248,7 +1251,12 @@ async function generateRecipes() {
       if (mode === 'web') recipes = await runWebMode(ingredients, dishRequest, filters, maxTime, servings, apiKey);
       else recipes = await runAiMode(ingredients, dishRequest, filters, maxTime, difficulty, mealType, servings, apiKey);
       addAndRender(recipes, mode);
-    } catch(e) { console.error(mode, e.message); showToast(`שגיאה ב-${mode}: ${e.message}`); }
+    } catch(e) {
+      console.error(mode, e.message);
+      const label = mode === 'web' ? 'חיפוש AI' : mode === 'ai' ? 'המצאת AI' : mode;
+      const isKeyErr = e.message.includes('תקין') || e.message.includes('פג תוקף') || e.message.includes('403');
+      showToast(`❌ ${label}: ${e.message}`, isKeyErr ? 5000 : 3000);
+    }
   }
   if (!allRecipes.length) {
     document.getElementById('resultsArea').innerHTML = `<div class="empty-state"><div class="icon">😕</div><p>לא נמצאו מתכונים</p></div>`;
