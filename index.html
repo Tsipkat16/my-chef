@@ -937,12 +937,67 @@ function updateTimerDisplay() {
 // ============================================================
 // SERVINGS SCALER
 // ============================================================
+
+// Words that represent a single countable item (no number prefix)
+const COUNTABLE_ITEMS = [
+  // פירות וירקות
+  'לימון','לימונים','תפוח','תפוחים','תפוז','תפוזים','בננה','בננות','עגבנייה','עגבניות',
+  'מלפפון','מלפפונים','גזר','גזרים','תפוח אדמה','תפוחי אדמה','בצל','בצלים',
+  'שום','שיני שום','שן שום','פלפל','פלפלים','חציל','חציילים','קישוא','קישואים',
+  'אבוקדו','אבוקדואים','מנגו','ליים','לייםים',
+  // ביצים
+  'ביצה','ביצים',
+  // בשר ודגים
+  'עוף','חזה עוף','כרעיים','שניצל','פילה','סטייק',
+  // אחר
+  'צנצנת','קופסה','קופסת','פחית','שקית','כף','כפית','כוס','חבילה',
+];
+
+// Hebrew plural forms map (singular → plural)
+const PLURAL_MAP = {
+  'לימון':'לימונים','תפוח':'תפוחים','תפוז':'תפוזים','בננה':'בננות',
+  'עגבנייה':'עגבניות','מלפפון':'מלפפונים','גזר':'גזרים',
+  'בצל':'בצלים','פלפל':'פלפלים','חציל':'חצילים','קישוא':'קישואים',
+  'ביצה':'ביצים','כוס':'כוסות','כף':'כפות','כפית':'כפיות',
+  'פחית':'פחיות','שקית':'שקיות','חבילה':'חבילות','צנצנת':'צנצנות',
+  'קופסה':'קופסות','אבוקדו':'אבוקדואים',
+};
+
+function pluralize(word, count) {
+  if (count === 1) return word;
+  // Check if we have an explicit plural
+  if (PLURAL_MAP[word]) return PLURAL_MAP[word];
+  // Default: return as-is (already plural or unknown)
+  return word;
+}
+
 function scaleIngredients(ingredients, scale) {
   return ingredients.map(ing => {
-    return ing.replace(/(\d+\.?\d*)/g, (match, num) => {
-      const scaled = parseFloat(num) * scale;
-      return scaled % 1 === 0 ? scaled : scaled.toFixed(1);
-    });
+    // First try to scale existing numbers
+    const hasNumber = /\d/.test(ing);
+    if (hasNumber) {
+      return ing.replace(/(\d+\.?\d*)/g, (match, num) => {
+        const scaled = parseFloat(num) * scale;
+        return scaled % 1 === 0 ? scaled : scaled.toFixed(1);
+      });
+    }
+
+    // No number — check if it's a countable item
+    const ingLower = ing.trim();
+    for (const item of COUNTABLE_ITEMS) {
+      // Match item at start of string (possibly with qualifiers after)
+      const regex = new RegExp(`^(${item})(.*)$`, 'i');
+      const m = ingLower.match(regex);
+      if (m) {
+        const count = Math.round(scale);
+        if (count <= 1) return ing; // keep as-is for 1
+        const plural = pluralize(item, count);
+        return `${count} ${plural}${m[2]}`;
+      }
+    }
+
+    // Not a countable — return as-is
+    return ing;
   });
 }
 
