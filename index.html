@@ -399,6 +399,11 @@
     <input class="auth-input" id="authName" type="text" placeholder="שם מלא" style="display:none">
     <button class="auth-btn auth-btn-primary" id="authSubmitBtn" onclick="submitAuth()">כניסה</button>
     <button class="auth-btn-link" onclick="resetPassword()">שכחתי סיסמה</button>
+    <div class="auth-divider">או</div>
+    <button class="auth-btn" style="background:var(--surface);border:1.5px solid var(--border);color:var(--muted);font-family:'Heebo',sans-serif" onclick="enterAsGuest()">
+      👤 כניסה כאורח (ללא חשבון)
+    </button>
+    <div style="font-size:0.72rem;color:var(--muted);margin-top:6px">הנתונים יישמרו רק במכשיר זה</div>
   </div>
 </div>
 
@@ -424,6 +429,13 @@
           <button class="user-menu-item" onclick="syncNow()"><span class="sync-dot"></span>סנכרן עכשיו</button>
           <button class="user-menu-item" style="color:#e74c3c" onclick="signOut()">🚪 יציאה</button>
           <button class="user-menu-item" style="color:#e74c3c;border-top:1px solid var(--border);margin-top:4px;padding-top:10px" onclick="confirmDeleteAccount()">🗑️ מחק חשבון</button>
+        </div>
+      </div>
+      <div class="user-badge" id="guestBadge" style="display:none" title="מצב אורח — הנתונים נשמרים רק במכשיר זה">
+        <div class="user-avatar-placeholder" style="background:var(--muted)">👤</div>
+        <span class="user-name" style="color:var(--muted)">אורח</span>
+        <div class="user-menu">
+          <button class="user-menu-item" onclick="exitGuestMode()">🔑 כניסה / הרשמה</button>
         </div>
       </div>
     </div>
@@ -659,9 +671,9 @@
   </div>
 </div>
 
-<script>
+<script type="module">
 // ============================================================
-// STATE
+// STATE  (exposed on window so onclick= handlers work)
 // ============================================================
 let activeFilters = new Set();
 let currentMode = 'ai';
@@ -1710,9 +1722,26 @@ window.addEventListener('DOMContentLoaded', () => {
     document.body.classList.add('light-mode');
     document.getElementById('themeBtn').textContent = '🌑 כהה';
   }
-  // keyboard: close modal on Escape
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
-  // Firebase init is handled in the module script below
+});
+
+// ── Expose all onclick= functions to window (required for module scope) ──
+Object.assign(window, {
+  toggleTheme, updateKeyStatus, copyKey, getApiKey, getSerperKey,
+  showToast, showPage, toggleFilter, toggleMode,
+  addToHistory, renderHistoryChips, useHistory, removeHistory,
+  filterResults, isFavorite, toggleFavorite, renderFavorites,
+  setRating, renderStars, addToShoppingList, renderShopList,
+  toggleShopItem, removeShopItem, clearCheckedItems, clearAllShop,
+  copyShoppingList, updateBadges, buildTimerBox, setTimerMins,
+  startTimer, stopTimer, updateTimerDisplay, scaleIngredients,
+  changeServings, shareRecipe, printRecipe, copyRecipeText,
+  buildRecipeCard, toggleFavCard, renderRecipes, openRecipeModal,
+  toggleFavModal, saveAsMyRecipe, closeModal, closeModalBg,
+  runWebMode, runAiMode, generateRecipes, saveMyRecipe,
+  renderMyRecipes, deleteRecipe, surpriseMe, sortResults,
+  renderTagFilters, filterByTag, shareWhatsapp, markCooked,
+  toggleNotesPanel, saveNotes, showSavedNote, renderStats,
 });
 </script>
 
@@ -1749,7 +1778,7 @@ import {
 
 const firebaseConfig = {
   apiKey: "AIzaSyAi3l86qRDzfEjIdqJuKS4ZfUfPnzQg2Uw",
-  authDomain: "my-chef-ai-internet.firebaseapp.com",
+  authDomain: "tsipkat16.github.io",
   projectId: "my-chef-ai-internet",
   storageBucket: "my-chef-ai-internet.firebasestorage.app",
   messagingSenderId: "160903146532",
@@ -1859,6 +1888,13 @@ onAuthStateChanged(auth, async (user) => {
   // Always hide loading screen once auth state is known
   if (loadingScreen) loadingScreen.style.display = 'none';
 
+  // If user chose guest mode, don't show auth screen
+  if (!user && sessionStorage.getItem('guestMode') === '1') {
+    authScreen.style.display = 'none';
+    document.getElementById('guestBadge').style.display = 'flex';
+    return;
+  }
+
   if (user) {
     // Handle pending delete after re-auth
     if (sessionStorage.getItem('pendingDelete') === '1') {
@@ -1877,6 +1913,8 @@ onAuthStateChanged(auth, async (user) => {
 
     currentUser = user;
     authScreen.style.display = 'none';
+    document.getElementById('guestBadge').style.display = 'none';
+    sessionStorage.removeItem('guestMode');
     userBadge.style.display = 'flex';
 
     // Set user display
@@ -1975,6 +2013,22 @@ window.syncNow = async () => {
 };
 window.showUserProfile = () => {
   window.showToast(`👤 ${currentUser?.displayName || currentUser?.email || 'משתמש'}`);
+};
+
+// ─── GUEST MODE ───────────────────────────────────────────────
+window.enterAsGuest = () => {
+  sessionStorage.setItem('guestMode', '1');
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('guestBadge').style.display = 'flex';
+  document.getElementById('userBadge').style.display = 'none';
+  window.showToast('👤 נכנסת כאורח — הנתונים נשמרים מקומית בלבד');
+};
+
+window.exitGuestMode = () => {
+  sessionStorage.removeItem('guestMode');
+  document.getElementById('guestBadge').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'flex';
 };
 
 // ─── DELETE ACCOUNT ───────────────────────────────────────────
