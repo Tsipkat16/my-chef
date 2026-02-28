@@ -862,15 +862,22 @@ function updateBadges() {
 // TIMER
 // ============================================================
 function buildTimerBox(suggestedMinutes) {
-  const mins = suggestedMinutes || 30;
+  if (!suggestedMinutes) return '';
+  const mins = suggestedMinutes;
+  // Build smart presets based on recipe time
+  const presets = [];
+  if (mins > 10) presets.push(5);
+  if (mins > 15) presets.push(10);
+  if (mins > 20) presets.push(15);
+  presets.push(mins); // always include the recipe time
+  if (mins < 60) presets.push(60);
+  // Remove duplicates and sort
+  const uniquePresets = [...new Set(presets)].sort((a,b)=>a-b);
   return `
   <div class="timer-box">
-    <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px;text-align:center">⏱️ טיימר בישול</div>
+    <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px;text-align:center">⏱️ טיימר בישול — ${mins} דק' לפי המתכון</div>
     <div class="timer-input-wrap">
-      <button class="timer-preset" onclick="setTimerMins(5)">5 דק'</button>
-      <button class="timer-preset" onclick="setTimerMins(10)">10 דק'</button>
-      <button class="timer-preset" onclick="setTimerMins(${mins})">${mins} דק'</button>
-      <button class="timer-preset" onclick="setTimerMins(60)">שעה</button>
+      ${uniquePresets.map(p => `<button class="timer-preset" onclick="setTimerMins(${p})">${p === 60 ? "שעה" : p + " דק'"}</button>`).join('')}
     </div>
     <div class="timer-display" id="timerDisplay">00:00</div>
     <div class="timer-controls">
