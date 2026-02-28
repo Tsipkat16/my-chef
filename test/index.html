@@ -879,7 +879,7 @@ function buildTimerBox(suggestedMinutes) {
     <div class="timer-input-wrap">
       ${uniquePresets.map(p => `<button class="timer-preset" onclick="setTimerMins(${p})">${p === 60 ? "שעה" : p + " דק'"}</button>`).join('')}
     </div>
-    <div class="timer-display" id="timerDisplay">00:00</div>
+    <div class="timer-display" id="timerDisplay">${String(Math.floor(mins/1)).padStart(2,'0')}:00</div>
     <div class="timer-controls">
       <input id="timerManualMins" type="number" value="${mins}" min="1" max="999" style="width:56px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:5px 8px;color:var(--text);font-size:0.9rem;text-align:center">
       <button class="timer-start-btn" id="timerStartBtn" onclick="startTimer()">▶ התחל</button>
@@ -1069,6 +1069,7 @@ function openRecipeModal(r, mode) {
   currentServingsScale = 1;
   baseServings = r.servings || 4;
   stopTimer();
+  if (r.time) timerSeconds = r.time * 60;
   const n = r.nutrition || {};
   const ratingKey = r.name.replace(/\s/g,'_');
   const currentRating = ratings[ratingKey] || 0;
