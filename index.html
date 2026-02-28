@@ -1205,7 +1205,6 @@ ${mealType ? `סוג ארוחה: ${mealType}` : ''}
 async function generateRecipes() {
   const ingredients = document.getElementById('ingredientsInput').value.trim();
   const dishRequest = document.getElementById('dishInput').value.trim();
-  if (!ingredients && !dishRequest && !activeModes.has('mine')) { showToast('אנא הכניסי מה תרצי להכין או מרכיבים 😊'); return; }
   const apiKey = getApiKey();
   if ((activeModes.has('ai') || activeModes.has('web')) && (!apiKey || !apiKey.startsWith('gsk_'))) {
     showToast('אנא הכניסי את מפתח ה-API של Groq 🔑');
