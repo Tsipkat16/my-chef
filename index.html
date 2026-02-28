@@ -294,6 +294,41 @@
   .toast { position: fixed; bottom: 24px; right: 24px; background: var(--card); border: 1px solid var(--accent); border-radius: 12px; padding: 12px 20px; font-size: 0.88rem; color: var(--text); z-index: 9999; animation: toastIn 0.3s ease; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
   @keyframes toastIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 
+  /* AUTH SCREEN */
+  #authScreen { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .auth-card { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 40px 36px; max-width: 420px; width: 100%; text-align: center; }
+  .auth-logo { font-family: 'Frank Ruhl Libre', serif; font-size: 2.2rem; font-weight: 900; color: var(--accent); margin-bottom: 6px; }
+  .auth-tagline { color: var(--muted); font-size: 0.85rem; margin-bottom: 32px; }
+  .auth-divider { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 0.78rem; margin: 20px 0; }
+  .auth-divider::before, .auth-divider::after { content:''; flex:1; height:1px; background: var(--border); }
+  .auth-input { width: 100%; background: var(--bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 11px 14px; color: var(--text); font-family: 'Heebo', sans-serif; font-size: 0.92rem; margin-bottom: 10px; direction: rtl; }
+  .auth-input:focus { outline: none; border-color: var(--accent); }
+  .auth-btn { width: 100%; padding: 12px; border-radius: 12px; border: none; font-family: 'Heebo', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: all 0.2s; margin-bottom: 10px; }
+  .auth-btn-google { background: #fff; color: #333; border: 1.5px solid #ddd; display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .auth-btn-google:hover { background: #f5f5f5; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+  .auth-btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #0d0d0d; }
+  .auth-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(232,184,109,0.35); }
+  .auth-btn-link { background: none; color: var(--accent); font-size: 0.82rem; padding: 6px; text-decoration: underline; cursor: pointer; border: none; font-family: 'Heebo', sans-serif; }
+  .auth-error { color: #e74c3c; font-size: 0.82rem; margin-bottom: 10px; min-height: 18px; }
+  .auth-tabs { display: flex; gap: 0; background: var(--bg); border-radius: 10px; padding: 4px; margin-bottom: 20px; }
+  .auth-tab { flex: 1; padding: 8px; background: transparent; border: none; color: var(--muted); font-family: 'Heebo', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; border-radius: 8px; transition: all 0.2s; }
+  .auth-tab.active { background: var(--card); color: var(--text); font-weight: 700; box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
+
+  /* USER BADGE in header */
+  .user-badge { display: flex; align-items: center; gap: 8px; background: rgba(232,184,109,0.1); border: 1px solid rgba(232,184,109,0.25); border-radius: 50px; padding: 5px 12px; cursor: pointer; transition: all 0.2s; position: relative; }
+  .user-badge:hover { background: rgba(232,184,109,0.2); }
+  .user-avatar { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
+  .user-avatar-placeholder { width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #0d0d0d; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; }
+  .user-name { font-size: 0.8rem; color: var(--accent); max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .user-menu { position: absolute; top: 40px; left: 0; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 8px; min-width: 160px; z-index: 999; box-shadow: 0 8px 32px rgba(0,0,0,0.3); display: none; }
+  .user-badge:hover .user-menu, .user-menu:hover { display: block; }
+  .user-menu-item { display: block; width: 100%; text-align: right; padding: 8px 12px; background: none; border: none; color: var(--text); font-family: 'Heebo', sans-serif; font-size: 0.84rem; cursor: pointer; border-radius: 8px; transition: background 0.15s; }
+  .user-menu-item:hover { background: var(--border); }
+
+  /* Sync indicator */
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #5cb85c; margin-right: 4px; display: inline-block; animation: syncPulse 2s ease-in-out infinite; }
+  @keyframes syncPulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
   /* Print styles */
   @media print {
     header, .api-key-bar, .nav-btns, .mode-tabs, .input-section, .generate-btn, .modal-overlay, .modal-close, .modal-actions, .timer-box, .servings-scaler { display: none !important; }
@@ -314,6 +349,29 @@
 </head>
 <body>
 
+<!-- AUTH SCREEN -->
+<div id="authScreen" style="display:none">
+  <div class="auth-card">
+    <div class="auth-logo">🍽️ מתכון בקליק</div>
+    <div class="auth-tagline">בינה מלאכותית בשירות המטבח שלך</div>
+    <button class="auth-btn auth-btn-google" onclick="signInWithGoogle()">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      כניסה עם Google
+    </button>
+    <div class="auth-divider">או</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">כניסה</button>
+      <button class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">הרשמה</button>
+    </div>
+    <div class="auth-error" id="authError"></div>
+    <input class="auth-input" id="authEmail" type="email" placeholder="אימייל" dir="ltr">
+    <input class="auth-input" id="authPassword" type="password" placeholder="סיסמה" dir="ltr">
+    <input class="auth-input" id="authName" type="text" placeholder="שם מלא" style="display:none">
+    <button class="auth-btn auth-btn-primary" id="authSubmitBtn" onclick="submitAuth()">כניסה</button>
+    <button class="auth-btn-link" onclick="resetPassword()">שכחתי סיסמה</button>
+  </div>
+</div>
+
 <header>
   <div class="header-inner">
     <div>
@@ -327,6 +385,16 @@
       <button class="filter-btn" id="nav-mine" onclick="showPage('mine',this)">📚 המתכונים שלי</button>
       <button class="filter-btn" id="nav-stats" onclick="showPage('stats',this)">📊 סטטיסטיקות</button>
       <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 לילה</button>
+      <div class="user-badge" id="userBadge" style="display:none">
+        <div class="user-avatar-placeholder" id="userAvatarPlaceholder">?</div>
+        <img class="user-avatar" id="userAvatar" style="display:none">
+        <span class="user-name" id="userName"></span>
+        <div class="user-menu">
+          <button class="user-menu-item" onclick="showUserProfile()">👤 הפרופיל שלי</button>
+          <button class="user-menu-item" onclick="syncNow()"><span class="sync-dot"></span>סנכרן עכשיו</button>
+          <button class="user-menu-item" style="color:#e74c3c" onclick="signOut()">🚪 יציאה</button>
+        </div>
+      </div>
     </div>
   </div>
 </header>
@@ -570,7 +638,6 @@ let myRecipes = JSON.parse(localStorage.getItem('myRecipes_v2') || '[]');
 let favorites = JSON.parse(localStorage.getItem('favorites_v1') || '[]');
 let shoppingList = JSON.parse(localStorage.getItem('shopping_v1') || '[]');
 let ratings = JSON.parse(localStorage.getItem('ratings_v1') || '{}');
-let ratingsMeta = JSON.parse(localStorage.getItem('ratings_meta_v1') || '{}'); // stores full recipe data per rating
 let searchHistory = JSON.parse(localStorage.getItem('search_history_v1') || '[]');
 let lastRecipes = [];
 let cookedLog = JSON.parse(localStorage.getItem('cooked_log_v1') || '[]');
@@ -742,6 +809,7 @@ function toggleFavorite(recipe, btnEl) {
   }
   localStorage.setItem('favorites_v1', JSON.stringify(favorites));
   updateBadges();
+  if (window._scheduleSync) window._scheduleSync();
 }
 
 function renderFavorites() {
@@ -764,20 +832,7 @@ function renderFavorites() {
 function setRating(recipeKey, stars) {
   ratings[recipeKey] = stars;
   localStorage.setItem('ratings_v1', JSON.stringify(ratings));
-  // Save recipe metadata for taste learning
-  if (currentModalRecipe && currentModalRecipe.name.replace(/\s/g,'_') === recipeKey) {
-    ratingsMeta[recipeKey] = {
-      name: currentModalRecipe.name,
-      stars,
-      dietary: currentModalRecipe.dietary || [],
-      difficulty: currentModalRecipe.difficulty || '',
-      time: currentModalRecipe.time || 0,
-      ingredients: (currentModalRecipe.ingredients || []).slice(0, 8),
-      category: currentModalRecipe.category || '',
-      ts: Date.now()
-    };
-    localStorage.setItem('ratings_meta_v1', JSON.stringify(ratingsMeta));
-  }
+  if (window._scheduleSync) window._scheduleSync();
   const el = document.getElementById('stars-' + recipeKey);
   if (el) renderStars(el, recipeKey, stars);
   showToast(`⭐ דירגת ${stars}/5`);
@@ -877,24 +932,17 @@ function updateBadges() {
 // TIMER
 // ============================================================
 function buildTimerBox(suggestedMinutes) {
-  if (!suggestedMinutes) return '';
-  const mins = suggestedMinutes;
-  // Build smart presets based on recipe time
-  const presets = [];
-  if (mins > 10) presets.push(5);
-  if (mins > 15) presets.push(10);
-  if (mins > 20) presets.push(15);
-  presets.push(mins); // always include the recipe time
-  if (mins < 60) presets.push(60);
-  // Remove duplicates and sort
-  const uniquePresets = [...new Set(presets)].sort((a,b)=>a-b);
+  const mins = suggestedMinutes || 30;
   return `
   <div class="timer-box">
-    <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px;text-align:center">⏱️ טיימר בישול — ${mins} דק' לפי המתכון</div>
+    <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px;text-align:center">⏱️ טיימר בישול</div>
     <div class="timer-input-wrap">
-      ${uniquePresets.map(p => `<button class="timer-preset" onclick="setTimerMins(${p})">${p === 60 ? "שעה" : p + " דק'"}</button>`).join('')}
+      <button class="timer-preset" onclick="setTimerMins(5)">5 דק'</button>
+      <button class="timer-preset" onclick="setTimerMins(10)">10 דק'</button>
+      <button class="timer-preset" onclick="setTimerMins(${mins})">${mins} דק'</button>
+      <button class="timer-preset" onclick="setTimerMins(60)">שעה</button>
     </div>
-    <div class="timer-display" id="timerDisplay">${String(Math.floor(mins/1)).padStart(2,'0')}:00</div>
+    <div class="timer-display" id="timerDisplay">00:00</div>
     <div class="timer-controls">
       <input id="timerManualMins" type="number" value="${mins}" min="1" max="999" style="width:56px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:5px 8px;color:var(--text);font-size:0.9rem;text-align:center">
       <button class="timer-start-btn" id="timerStartBtn" onclick="startTimer()">▶ התחל</button>
@@ -904,16 +952,8 @@ function buildTimerBox(suggestedMinutes) {
 }
 
 function setTimerMins(m) {
-  // Stop interval without wiping the display to 00:00
-  clearInterval(timerInterval);
-  timerRunning = false;
-  const btn = document.getElementById('timerStartBtn');
-  if (btn) btn.textContent = '▶ התחל';
-  const disp = document.getElementById('timerDisplay');
-  if (disp) disp.classList.remove('done', 'running');
-  // Set new time
-  const input = document.getElementById('timerManualMins');
-  if (input) input.value = m;
+  stopTimer();
+  document.getElementById('timerManualMins').value = m;
   timerSeconds = m * 60;
   updateTimerDisplay();
 }
@@ -960,67 +1000,12 @@ function updateTimerDisplay() {
 // ============================================================
 // SERVINGS SCALER
 // ============================================================
-
-// Words that represent a single countable item (no number prefix)
-const COUNTABLE_ITEMS = [
-  // פירות וירקות
-  'לימון','לימונים','תפוח','תפוחים','תפוז','תפוזים','בננה','בננות','עגבנייה','עגבניות',
-  'מלפפון','מלפפונים','גזר','גזרים','תפוח אדמה','תפוחי אדמה','בצל','בצלים',
-  'שום','שיני שום','שן שום','פלפל','פלפלים','חציל','חציילים','קישוא','קישואים',
-  'אבוקדו','אבוקדואים','מנגו','ליים','לייםים',
-  // ביצים
-  'ביצה','ביצים',
-  // בשר ודגים
-  'עוף','חזה עוף','כרעיים','שניצל','פילה','סטייק',
-  // אחר
-  'צנצנת','קופסה','קופסת','פחית','שקית','כף','כפית','כוס','חבילה',
-];
-
-// Hebrew plural forms map (singular → plural)
-const PLURAL_MAP = {
-  'לימון':'לימונים','תפוח':'תפוחים','תפוז':'תפוזים','בננה':'בננות',
-  'עגבנייה':'עגבניות','מלפפון':'מלפפונים','גזר':'גזרים',
-  'בצל':'בצלים','פלפל':'פלפלים','חציל':'חצילים','קישוא':'קישואים',
-  'ביצה':'ביצים','כוס':'כוסות','כף':'כפות','כפית':'כפיות',
-  'פחית':'פחיות','שקית':'שקיות','חבילה':'חבילות','צנצנת':'צנצנות',
-  'קופסה':'קופסות','אבוקדו':'אבוקדואים',
-};
-
-function pluralize(word, count) {
-  if (count === 1) return word;
-  // Check if we have an explicit plural
-  if (PLURAL_MAP[word]) return PLURAL_MAP[word];
-  // Default: return as-is (already plural or unknown)
-  return word;
-}
-
 function scaleIngredients(ingredients, scale) {
   return ingredients.map(ing => {
-    // First try to scale existing numbers
-    const hasNumber = /\d/.test(ing);
-    if (hasNumber) {
-      return ing.replace(/(\d+\.?\d*)/g, (match, num) => {
-        const scaled = parseFloat(num) * scale;
-        return scaled % 1 === 0 ? scaled : scaled.toFixed(1);
-      });
-    }
-
-    // No number — check if it's a countable item
-    const ingLower = ing.trim();
-    for (const item of COUNTABLE_ITEMS) {
-      // Match item at start of string (possibly with qualifiers after)
-      const regex = new RegExp(`^(${item})(.*)$`, 'i');
-      const m = ingLower.match(regex);
-      if (m) {
-        const count = Math.round(scale);
-        if (count <= 1) return ing; // keep as-is for 1
-        const plural = pluralize(item, count);
-        return `${count} ${plural}${m[2]}`;
-      }
-    }
-
-    // Not a countable — return as-is
-    return ing;
+    return ing.replace(/(\d+\.?\d*)/g, (match, num) => {
+      const scaled = parseFloat(num) * scale;
+      return scaled % 1 === 0 ? scaled : scaled.toFixed(1);
+    });
   });
 }
 
@@ -1109,6 +1094,7 @@ function toggleFavCard(btnEl, recipeName, idx) {
   }
   localStorage.setItem('favorites_v1', JSON.stringify(favorites));
   updateBadges();
+  if (window._scheduleSync) window._scheduleSync();
 }
 
 // ============================================================
@@ -1147,7 +1133,6 @@ function openRecipeModal(r, mode) {
   currentServingsScale = 1;
   baseServings = r.servings || 4;
   stopTimer();
-  if (r.time) timerSeconds = r.time * 60;
   const n = r.nutrition || {};
   const ratingKey = r.name.replace(/\s/g,'_');
   const currentRating = ratings[ratingKey] || 0;
@@ -1254,6 +1239,7 @@ function saveAsMyRecipe(r) {
   const recipe = { ...r, id: Date.now(), _mode: 'mine' };
   myRecipes.push(recipe);
   localStorage.setItem('myRecipes_v2', JSON.stringify(myRecipes));
+  if (window._scheduleSync) window._scheduleSync();
   showToast('💾 המתכון נשמר במתכונים שלי!');
 }
 
@@ -1309,7 +1295,6 @@ async function runWebMode(ingredients, dishRequest, filters, maxTime, servings, 
     ingredients ? `מרכיבים זמינים: ${ingredients}. תן אחוז התאמה.` : '',
     filters ? `דרישות תזונתיות: ${filters}. אם לא עומד — אל תכלול.` : '',
     maxTime ? `זמן מקסימלי: ${maxTime} דקות. מתכונים ארוכים יותר — אל תכלול.` : '',
-    buildTasteContext(),
   ].filter(Boolean).join('\n');
   const groqResp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -1318,7 +1303,7 @@ async function runWebMode(ingredients, dishRequest, filters, maxTime, servings, 
       model: "llama-3.3-70b-versatile", max_tokens: 4500, temperature: 0.1,
       messages: [
         { role: "system", content: `אתה עוזר שמחלץ ומסנן מתכונים מעמודי אינטרנט. חוקים: 1. חלץ מתכון כמו שהוא. 2. מותר לשנות כמויות לפי סועדים (${servings}). 3. JSON בלבד ללא markdown.` },
-        { role: "user", content: `חלץ מתכונים מהתוכן הבא.\n${filterInstructions}\nסועדים: ${servings}\n\nחשוב: שדה "time" — רק אם מופיע במפורש בדף. אחרת תכתוב null. אל תמציא זמן!\n\n${webContext}\n\nהחזר עד 3 מתכונים. סמן isBest:true לאחד.\nJSON בלבד:\n{"recipes":[{"name":"","description":"","time":null,"difficulty":"קל","servings":${servings},"dietary":[],"isBest":false,"bestReason":"","source":"","ingredientMatch":80,"ingredients":[""],"steps":[""],"nutrition":{"calories":300,"protein":20,"carbs":35,"fat":10},"tip":""}]}` }
+        { role: "user", content: `חלץ מתכונים מהתוכן הבא.\n${filterInstructions}\nסועדים: ${servings}\n\n${webContext}\n\nהחזר עד 3 מתכונים. סמן isBest:true לאחד.\nJSON בלבד:\n{"recipes":[{"name":"","description":"","time":30,"difficulty":"קל","servings":${servings},"dietary":[],"isBest":false,"bestReason":"","source":"","ingredientMatch":80,"ingredients":[""],"steps":[""],"nutrition":{"calories":300,"protein":20,"carbs":35,"fat":10},"tip":""}]}` }
       ]
     })
   });
@@ -1331,85 +1316,9 @@ async function runWebMode(ingredients, dishRequest, filters, maxTime, servings, 
 }
 
 // ============================================================
-// TASTE PROFILE — learns from ratings
+// AI MODE
 // ============================================================
-function buildTasteProfile() {
-  const entries = Object.values(ratingsMeta);
-  if (!entries.length) return null;
-
-  const liked = entries.filter(e => e.stars >= 4);
-  const disliked = entries.filter(e => e.stars <= 2);
-  const total = entries.length;
-
-  // Count frequencies in liked recipes
-  function freq(list, getter) {
-    const counts = {};
-    list.forEach(e => {
-      const vals = Array.isArray(getter(e)) ? getter(e) : [getter(e)];
-      vals.filter(Boolean).forEach(v => { counts[v] = (counts[v] || 0) + 1; });
-    });
-    return Object.entries(counts).sort((a,b) => b[1]-a[1]);
-  }
-
-  const likedDietary = freq(liked, e => e.dietary).slice(0,4).map(([k]) => k);
-  const dislikedDietary = freq(disliked, e => e.dietary).slice(0,3).map(([k]) => k);
-
-  // Difficulty preference
-  const diffCount = {};
-  liked.forEach(e => { if (e.difficulty) diffCount[e.difficulty] = (diffCount[e.difficulty]||0)+1; });
-  const preferredDiff = Object.entries(diffCount).sort((a,b)=>b[1]-a[1])[0]?.[0] || null;
-
-  // Time preference
-  const avgTime = liked.length ? Math.round(liked.reduce((s,e) => s+e.time, 0) / liked.length) : null;
-
-  // Common liked ingredients (extract key words)
-  const ingWords = {};
-  liked.forEach(e => {
-    (e.ingredients || []).forEach(ing => {
-      ing.split(/[\s,]+/).filter(w => w.length > 3).forEach(w => {
-        ingWords[w] = (ingWords[w]||0)+1;
-      });
-    });
-  });
-  const topIngs = Object.entries(ingWords).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([k])=>k);
-
-  // Disliked ingredients
-  const dislikedIngWords = {};
-  disliked.forEach(e => {
-    (e.ingredients || []).forEach(ing => {
-      ing.split(/[\s,]+/).filter(w => w.length > 3).forEach(w => {
-        dislikedIngWords[w] = (dislikedIngWords[w]||0)+1;
-      });
-    });
-  });
-  const topDislikedIngs = Object.entries(dislikedIngWords).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k])=>k);
-
-  return {
-    total, liked: liked.length, disliked: disliked.length,
-    likedDietary, dislikedDietary,
-    preferredDiff, avgTime,
-    topIngs, topDislikedIngs,
-    avgStars: (entries.reduce((s,e)=>s+e.stars,0)/total).toFixed(1)
-  };
-}
-
-function buildTasteContext() {
-  const p = buildTasteProfile();
-  if (!p || p.total < 2) return ''; // need at least 2 ratings to learn
-  let ctx = `\n--- פרופיל טעם אישי (למד מ-${p.total} דירוגים) ---\n`;
-  if (p.likedDietary.length) ctx += `המשתמש אוהב: ${p.likedDietary.join(', ')}\n`;
-  if (p.dislikedDietary.length) ctx += `פחות אוהב: ${p.dislikedDietary.join(', ')}\n`;
-  if (p.preferredDiff) ctx += `רמת קושי מועדפת: ${p.preferredDiff}\n`;
-  if (p.avgTime) ctx += `זמן בישול ממוצע אהוב: כ-${p.avgTime} דקות\n`;
-  if (p.topIngs.length) ctx += `מרכיבים שחוזרים במתכונים האהובים: ${p.topIngs.join(', ')}\n`;
-  if (p.topDislikedIngs.length) ctx += `מרכיבים שחוזרים במתכונים הפחות אהובים (נסה להמנע): ${p.topDislikedIngs.join(', ')}\n`;
-  ctx += `השתמש בפרופיל זה כדי להתאים את ההמלצות לטעם האישי של המשתמש.\n---`;
-  return ctx;
-}
-
-
 async function runAiMode(ingredients, dishRequest, filters, maxTime, difficulty, mealType, servings, apiKey) {
-  const tasteCtx = buildTasteContext();
   const prompt = `אתה שף מומחה ישראלי עם ניסיון של 20 שנה.
 ${dishRequest ? 'המשתמש רוצה להכין: ' + dishRequest : ''}
 ${ingredients ? 'מרכיבים זמינים: ' + ingredients : ''}
@@ -1418,12 +1327,9 @@ ${maxTime ? `זמן הכנה מקסימלי: ${maxTime} דקות` : ''}
 ${difficulty ? `רמת קושי רצויה: ${difficulty}` : ''}
 ${mealType ? `סוג ארוחה: ${mealType}` : ''}
 מספר סועדים: ${servings}
-${tasteCtx}
 המצא 3 מתכונים מקוריים. זהה תגי dietary. סמן אחד כ-isBest:true עם bestReason.
-${tasteCtx ? 'בחר את isBest לפי התאמה לפרופיל הטעם האישי.' : ''}
-חשוב: שדה "time" — רק אם אתה יודע בוודאות את זמן ההכנה. אחרת תכתוב null. אל תמציא זמן!
 החזר JSON בלבד:
-{"recipes":[{"name":"","description":"","time":null,"difficulty":"קל","servings":${servings},"dietary":[],"isBest":false,"bestReason":"","ingredients":[""],"steps":[""],"nutrition":{"calories":350,"protein":25,"carbs":30,"fat":12},"tip":""}]}`;
+{"recipes":[{"name":"","description":"","time":30,"difficulty":"קל","servings":${servings},"dietary":[],"isBest":false,"bestReason":"","ingredients":[""],"steps":[""],"nutrition":{"calories":350,"protein":25,"carbs":30,"fat":12},"tip":""}]}`;
   const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
@@ -1527,6 +1433,7 @@ function saveMyRecipe() {
   };
   myRecipes.push(r);
   localStorage.setItem('myRecipes_v2', JSON.stringify(myRecipes));
+  if (window._scheduleSync) window._scheduleSync();
   ['newRecipeName','newRecipeIngredients','newRecipeSteps','newRecipeTags','newRecipeTime','newRecipeTip'].forEach(id => document.getElementById(id).value = '');
   renderMyRecipes();
   showToast('✅ המתכון נשמר בהצלחה!');
@@ -1565,6 +1472,7 @@ function deleteRecipe(id) {
   if (!confirm('למחוק את המתכון?')) return;
   myRecipes = myRecipes.filter(r => r.id !== id);
   localStorage.setItem('myRecipes_v2', JSON.stringify(myRecipes));
+  if (window._scheduleSync) window._scheduleSync();
   renderMyRecipes();
 }
 
@@ -1659,6 +1567,7 @@ function markCooked(r) {
   cookedLog.unshift(entry);
   if (cookedLog.length > 100) cookedLog = cookedLog.slice(0, 100);
   localStorage.setItem('cooked_log_v1', JSON.stringify(cookedLog));
+  if (window._scheduleSync) window._scheduleSync();
   showToast('✅ נרשם ביומן הבישול!');
   // show in modal
   const logEl = document.getElementById('cookedLog');
@@ -1690,6 +1599,7 @@ function saveNotes() {
   const val = document.getElementById('recipeNotesInput').value.trim();
   recipeNotes[key] = val;
   localStorage.setItem('recipe_notes_v1', JSON.stringify(recipeNotes));
+  if (window._scheduleSync) window._scheduleSync();
   showSavedNote(key);
   showToast('📝 ההערה נשמרה!');
 }
@@ -1725,51 +1635,6 @@ function renderStats() {
   const uniqueCooked = Object.keys(cookedCount).length;
 
   document.getElementById('statsContent').innerHTML = `
-    ${(() => {
-      const p = buildTasteProfile();
-      if (!p || p.total < 2) return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:20px;text-align:center;color:var(--muted);font-size:0.88rem">
-        🧠 <strong style="color:var(--accent)">פרופיל טעם אישי</strong><br><span style="font-size:0.8rem">דרג לפחות 2 מתכונים כדי שהאפליקציה תתחיל ללמוד את הטעם שלך</span>
-      </div>`;
-      const strengthPct = Math.min(100, Math.round((p.total / 10) * 100));
-      const bars = '█'.repeat(Math.round(strengthPct/10)) + '░'.repeat(10-Math.round(strengthPct/10));
-      return `
-      <div style="background:linear-gradient(135deg,rgba(232,184,109,0.08),rgba(232,184,109,0.03));border:1px solid rgba(232,184,109,0.3);border-radius:var(--radius);padding:20px;margin-bottom:20px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-          <div style="font-family:'Frank Ruhl Libre',serif;font-size:1.1rem;color:var(--accent);font-weight:700">🧠 פרופיל טעם אישי</div>
-          <div style="font-size:0.76rem;color:var(--muted)">למד מ-${p.total} דירוגים | ממוצע ${p.avgStars}★</div>
-        </div>
-        <div style="margin-bottom:12px">
-          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:4px">עוצמת הפרופיל</div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="font-family:monospace;color:var(--accent);font-size:0.8rem;letter-spacing:1px">${bars}</div>
-            <span style="font-size:0.78rem;color:var(--muted)">${strengthPct}%</span>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
-          ${p.likedDietary.length ? `<div style="background:rgba(92,184,92,0.08);border:1px solid rgba(92,184,92,0.2);border-radius:10px;padding:10px">
-            <div style="font-size:0.7rem;color:#7ddb7d;margin-bottom:6px;font-weight:700">✅ אוהב</div>
-            <div style="font-size:0.82rem">${p.likedDietary.join(' · ')}</div>
-          </div>` : ''}
-          ${p.dislikedDietary.length ? `<div style="background:rgba(192,57,43,0.07);border:1px solid rgba(192,57,43,0.2);border-radius:10px;padding:10px">
-            <div style="font-size:0.7rem;color:#e74c3c;margin-bottom:6px;font-weight:700">❌ פחות אוהב</div>
-            <div style="font-size:0.82rem">${p.dislikedDietary.join(' · ')}</div>
-          </div>` : ''}
-          ${p.preferredDiff ? `<div style="background:rgba(126,176,247,0.08);border:1px solid rgba(126,176,247,0.2);border-radius:10px;padding:10px">
-            <div style="font-size:0.7rem;color:#7eb0f7;margin-bottom:6px;font-weight:700">👨‍🍳 רמת קושי מועדפת</div>
-            <div style="font-size:0.82rem">${p.preferredDiff}</div>
-          </div>` : ''}
-          ${p.avgTime ? `<div style="background:rgba(232,184,109,0.08);border:1px solid rgba(232,184,109,0.2);border-radius:10px;padding:10px">
-            <div style="font-size:0.7rem;color:var(--accent);margin-bottom:6px;font-weight:700">⏱️ זמן בישול אהוב</div>
-            <div style="font-size:0.82rem">כ-${p.avgTime} דקות</div>
-          </div>` : ''}
-          ${p.topIngs.length ? `<div style="background:rgba(232,184,109,0.06);border:1px solid rgba(232,184,109,0.15);border-radius:10px;padding:10px;grid-column:span 2">
-            <div style="font-size:0.7rem;color:var(--accent);margin-bottom:6px;font-weight:700">🥕 מרכיבים שאתה נוטה לאהוב</div>
-            <div style="display:flex;flex-wrap:wrap;gap:5px">${p.topIngs.map(i=>`<span style="background:rgba(232,184,109,0.12);border-radius:50px;padding:2px 9px;font-size:0.76rem;color:var(--accent)">${i}</span>`).join('')}</div>
-          </div>` : ''}
-        </div>
-        <div style="margin-top:12px;font-size:0.76rem;color:var(--muted);text-align:center">💡 ההמלצות שלך מותאמות אוטומטית לפרופיל זה בכל חיפוש</div>
-      </div>`;
-    })()}
     <div class="stats-grid">
       <div class="stat-box"><div class="stat-val">${totalFav}</div><div class="stat-label">❤️ מועדפים</div></div>
       <div class="stat-box"><div class="stat-val">${totalMine}</div><div class="stat-label">📚 מתכוניי</div></div>
@@ -1816,7 +1681,230 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   // keyboard: close modal on Escape
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+  // Firebase init is handled in the module script below
 });
+</script>
+
+<!-- FIREBASE MODULE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signInWithPopup,
+  GoogleAuthProvider,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  updateProfile,
+  signOut as fbSignOut
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  onSnapshot,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAi3l86qRDzfEjIdqJuKS4ZfUfPnzQg2Uw",
+  authDomain: "my-chef-ai-internet.firebaseapp.com",
+  projectId: "my-chef-ai-internet",
+  storageBucket: "my-chef-ai-internet.firebasestorage.app",
+  messagingSenderId: "160903146532",
+  appId: "1:160903146532:web:fbc4db74c6458ee6647cb1",
+  measurementId: "G-RK5HW0SRQR"
+};
+
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const googleProvider = new GoogleAuthProvider();
+
+let currentUser = null;
+let firestoreUnsubscribe = null;
+let syncTimeout = null;
+
+// ─── AUTH SCREEN ─────────────────────────────────────────────
+let authMode = 'login';
+
+window.switchAuthTab = (mode) => {
+  authMode = mode;
+  document.getElementById('tabLogin').classList.toggle('active', mode === 'login');
+  document.getElementById('tabRegister').classList.toggle('active', mode === 'register');
+  document.getElementById('authName').style.display = mode === 'register' ? 'block' : 'none';
+  document.getElementById('authSubmitBtn').textContent = mode === 'login' ? 'כניסה' : 'הרשמה';
+  document.getElementById('authError').textContent = '';
+};
+
+window.signInWithGoogle = async () => {
+  try {
+    document.getElementById('authError').textContent = '';
+    await signInWithPopup(auth, googleProvider);
+  } catch(e) {
+    document.getElementById('authError').textContent = getAuthError(e.code);
+  }
+};
+
+window.submitAuth = async () => {
+  const email = document.getElementById('authEmail').value.trim();
+  const pass = document.getElementById('authPassword').value;
+  const name = document.getElementById('authName').value.trim();
+  document.getElementById('authError').textContent = '';
+  if (!email || !pass) { document.getElementById('authError').textContent = 'נא למלא אימייל וסיסמה'; return; }
+  try {
+    if (authMode === 'register') {
+      const cred = await createUserWithEmailAndPassword(auth, email, pass);
+      if (name) await updateProfile(cred.user, { displayName: name });
+    } else {
+      await signInWithEmailAndPassword(auth, email, pass);
+    }
+  } catch(e) {
+    document.getElementById('authError').textContent = getAuthError(e.code);
+  }
+};
+
+window.resetPassword = async () => {
+  const email = document.getElementById('authEmail').value.trim();
+  if (!email) { document.getElementById('authError').textContent = 'נא להכניס אימייל תחילה'; return; }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    document.getElementById('authError').style.color = '#7ddb7d';
+    document.getElementById('authError').textContent = '📧 נשלח אימייל לאיפוס סיסמה!';
+  } catch(e) {
+    document.getElementById('authError').textContent = getAuthError(e.code);
+  }
+};
+
+window.signOut = async () => {
+  if (firestoreUnsubscribe) firestoreUnsubscribe();
+  await fbSignOut(auth);
+};
+
+function getAuthError(code) {
+  const errors = {
+    'auth/user-not-found': 'משתמש לא נמצא',
+    'auth/wrong-password': 'סיסמה שגויה',
+    'auth/email-already-in-use': 'האימייל כבר בשימוש',
+    'auth/weak-password': 'הסיסמה חלשה מדי (לפחות 6 תווים)',
+    'auth/invalid-email': 'אימייל לא תקין',
+    'auth/popup-closed-by-user': 'החלון נסגר',
+    'auth/invalid-credential': 'פרטי הכניסה שגויים',
+  };
+  return errors[code] || 'שגיאה: ' + code;
+}
+
+// ─── AUTH STATE ───────────────────────────────────────────────
+onAuthStateChanged(auth, async (user) => {
+  const authScreen = document.getElementById('authScreen');
+  const userBadge = document.getElementById('userBadge');
+
+  if (user) {
+    currentUser = user;
+    authScreen.style.display = 'none';
+    userBadge.style.display = 'flex';
+
+    // Set user display
+    const nameEl = document.getElementById('userName');
+    nameEl.textContent = user.displayName || user.email?.split('@')[0] || 'משתמש';
+    if (user.photoURL) {
+      document.getElementById('userAvatar').src = user.photoURL;
+      document.getElementById('userAvatar').style.display = 'block';
+      document.getElementById('userAvatarPlaceholder').style.display = 'none';
+    } else {
+      const initials = (user.displayName || user.email || '?')[0].toUpperCase();
+      document.getElementById('userAvatarPlaceholder').textContent = initials;
+    }
+
+    // Load data from Firestore and start live sync
+    await loadFromFirestore(user.uid);
+    setupFirestoreSync(user.uid);
+
+  } else {
+    currentUser = null;
+    if (firestoreUnsubscribe) { firestoreUnsubscribe(); firestoreUnsubscribe = null; }
+    authScreen.style.display = 'flex';
+    userBadge.style.display = 'none';
+  }
+});
+
+// ─── FIRESTORE DATA ───────────────────────────────────────────
+const DATA_FIELDS = ['favorites', 'ratings', 'cookedLog', 'recipeNotes', 'myRecipes'];
+
+async function loadFromFirestore(uid) {
+  try {
+    const snap = await getDoc(doc(db, 'users', uid));
+    if (snap.exists()) {
+      const data = snap.data();
+      // Merge: prefer Firestore over localStorage, but keep localStorage if Firestore is empty
+      if (data.favorites?.length)   { window.favorites   = data.favorites;   localStorage.setItem('favorites_v1', JSON.stringify(data.favorites)); }
+      if (data.ratings && Object.keys(data.ratings).length) { window.ratings = data.ratings; localStorage.setItem('ratings_v1', JSON.stringify(data.ratings)); }
+      if (data.cookedLog?.length)   { window.cookedLog   = data.cookedLog;   localStorage.setItem('cooked_log_v1', JSON.stringify(data.cookedLog)); }
+      if (data.recipeNotes && Object.keys(data.recipeNotes).length) { window.recipeNotes = data.recipeNotes; localStorage.setItem('recipe_notes_v1', JSON.stringify(data.recipeNotes)); }
+      if (data.myRecipes?.length)   { window.myRecipes   = data.myRecipes;   localStorage.setItem('myRecipes_v2', JSON.stringify(data.myRecipes)); }
+      updateBadges();
+      window.showToast('☁️ הנתונים נטענו מהענן!');
+    } else {
+      // First login — push localStorage data to Firestore
+      await saveToFirestore(uid);
+    }
+  } catch(e) {
+    console.error('Firestore load error:', e);
+  }
+}
+
+async function saveToFirestore(uid) {
+  if (!uid) return;
+  try {
+    await setDoc(doc(db, 'users', uid), {
+      favorites:   window.favorites   || [],
+      ratings:     window.ratings     || {},
+      cookedLog:   window.cookedLog   || [],
+      recipeNotes: window.recipeNotes || {},
+      myRecipes:   window.myRecipes   || [],
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+  } catch(e) {
+    console.error('Firestore save error:', e);
+  }
+}
+
+function setupFirestoreSync(uid) {
+  // Real-time listener
+  firestoreUnsubscribe = onSnapshot(doc(db, 'users', uid), (snap) => {
+    if (!snap.exists() || snap.metadata.hasPendingWrites) return;
+    const data = snap.data();
+    let changed = false;
+    if (data.favorites)   { window.favorites   = data.favorites;   localStorage.setItem('favorites_v1', JSON.stringify(data.favorites));     changed = true; }
+    if (data.ratings)     { window.ratings     = data.ratings;     localStorage.setItem('ratings_v1', JSON.stringify(data.ratings));         changed = true; }
+    if (data.cookedLog)   { window.cookedLog   = data.cookedLog;   localStorage.setItem('cooked_log_v1', JSON.stringify(data.cookedLog));     changed = true; }
+    if (data.recipeNotes) { window.recipeNotes = data.recipeNotes; localStorage.setItem('recipe_notes_v1', JSON.stringify(data.recipeNotes)); changed = true; }
+    if (data.myRecipes)   { window.myRecipes   = data.myRecipes;   localStorage.setItem('myRecipes_v2', JSON.stringify(data.myRecipes));       changed = true; }
+    if (changed) updateBadges();
+  });
+}
+
+// Debounced sync — called after any data change
+function scheduleSync() {
+  if (!currentUser) return;
+  clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(() => saveToFirestore(currentUser.uid), 1500);
+}
+
+// Expose sync helpers to global scope
+window._scheduleSync = scheduleSync;
+window.syncNow = async () => {
+  if (!currentUser) return;
+  await saveToFirestore(currentUser.uid);
+  window.showToast('✅ הנתונים סונכרנו!');
+};
+window.showUserProfile = () => {
+  window.showToast(`👤 ${currentUser?.displayName || currentUser?.email || 'משתמש'}`);
+};
 </script>
 </body>
 </html>
