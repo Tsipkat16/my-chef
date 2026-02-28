@@ -1693,6 +1693,8 @@ import {
   getAuth,
   onAuthStateChanged,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -1725,6 +1727,14 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 
+// Handle redirect result (Google sign-in returns here after redirect)
+getRedirectResult(auth).catch((e) => {
+  if (e && e.code) {
+    const errEl = document.getElementById('authError');
+    if (errEl) errEl.textContent = getAuthError(e.code);
+  }
+});
+
 let currentUser = null;
 let firestoreUnsubscribe = null;
 let syncTimeout = null;
@@ -1744,7 +1754,8 @@ window.switchAuthTab = (mode) => {
 window.signInWithGoogle = async () => {
   try {
     document.getElementById('authError').textContent = '';
-    await signInWithPopup(auth, googleProvider);
+    // Use redirect (works on GitHub Pages / any domain)
+    await signInWithRedirect(auth, googleProvider);
   } catch(e) {
     document.getElementById('authError').textContent = getAuthError(e.code);
   }
