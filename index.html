@@ -570,6 +570,7 @@ let myRecipes = JSON.parse(localStorage.getItem('myRecipes_v2') || '[]');
 let favorites = JSON.parse(localStorage.getItem('favorites_v1') || '[]');
 let shoppingList = JSON.parse(localStorage.getItem('shopping_v1') || '[]');
 let ratings = JSON.parse(localStorage.getItem('ratings_v1') || '{}');
+let ratingsMeta = JSON.parse(localStorage.getItem('ratings_meta_v1') || '{}'); // stores full recipe data per rating
 let searchHistory = JSON.parse(localStorage.getItem('search_history_v1') || '[]');
 let lastRecipes = [];
 let cookedLog = JSON.parse(localStorage.getItem('cooked_log_v1') || '[]');
@@ -763,6 +764,20 @@ function renderFavorites() {
 function setRating(recipeKey, stars) {
   ratings[recipeKey] = stars;
   localStorage.setItem('ratings_v1', JSON.stringify(ratings));
+  // Save recipe metadata for taste learning
+  if (currentModalRecipe && currentModalRecipe.name.replace(/\s/g,'_') === recipeKey) {
+    ratingsMeta[recipeKey] = {
+      name: currentModalRecipe.name,
+      stars,
+      dietary: currentModalRecipe.dietary || [],
+      difficulty: currentModalRecipe.difficulty || '',
+      time: currentModalRecipe.time || 0,
+      ingredients: (currentModalRecipe.ingredients || []).slice(0, 8),
+      category: currentModalRecipe.category || '',
+      ts: Date.now()
+    };
+    localStorage.setItem('ratings_meta_v1', JSON.stringify(ratingsMeta));
+  }
   const el = document.getElementById('stars-' + recipeKey);
   if (el) renderStars(el, recipeKey, stars);
   showToast(`⭐ דירגת ${stars}/5`);
@@ -1286,6 +1301,7 @@ async function runWebMode(ingredients, dishRequest, filters, maxTime, servings, 
     ingredients ? `מרכיבים זמינים: ${ingredients}. תן אחוז התאמה.` : '',
     filters ? `דרישות תזונתיות: ${filters}. אם לא עומד — אל תכלול.` : '',
     maxTime ? `זמן מקסימלי: ${maxTime} דקות. מתכונים ארוכים יותר — אל תכלול.` : '',
+    buildTasteContext(),
   ].filter(Boolean).join('\n');
   const groqResp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -1307,9 +1323,85 @@ async function runWebMode(ingredients, dishRequest, filters, maxTime, servings, 
 }
 
 // ============================================================
-// AI MODE
+// TASTE PROFILE — learns from ratings
 // ============================================================
+function buildTasteProfile() {
+  const entries = Object.values(ratingsMeta);
+  if (!entries.length) return null;
+
+  const liked = entries.filter(e => e.stars >= 4);
+  const disliked = entries.filter(e => e.stars <= 2);
+  const total = entries.length;
+
+  // Count frequencies in liked recipes
+  function freq(list, getter) {
+    const counts = {};
+    list.forEach(e => {
+      const vals = Array.isArray(getter(e)) ? getter(e) : [getter(e)];
+      vals.filter(Boolean).forEach(v => { counts[v] = (counts[v] || 0) + 1; });
+    });
+    return Object.entries(counts).sort((a,b) => b[1]-a[1]);
+  }
+
+  const likedDietary = freq(liked, e => e.dietary).slice(0,4).map(([k]) => k);
+  const dislikedDietary = freq(disliked, e => e.dietary).slice(0,3).map(([k]) => k);
+
+  // Difficulty preference
+  const diffCount = {};
+  liked.forEach(e => { if (e.difficulty) diffCount[e.difficulty] = (diffCount[e.difficulty]||0)+1; });
+  const preferredDiff = Object.entries(diffCount).sort((a,b)=>b[1]-a[1])[0]?.[0] || null;
+
+  // Time preference
+  const avgTime = liked.length ? Math.round(liked.reduce((s,e) => s+e.time, 0) / liked.length) : null;
+
+  // Common liked ingredients (extract key words)
+  const ingWords = {};
+  liked.forEach(e => {
+    (e.ingredients || []).forEach(ing => {
+      ing.split(/[\s,]+/).filter(w => w.length > 3).forEach(w => {
+        ingWords[w] = (ingWords[w]||0)+1;
+      });
+    });
+  });
+  const topIngs = Object.entries(ingWords).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([k])=>k);
+
+  // Disliked ingredients
+  const dislikedIngWords = {};
+  disliked.forEach(e => {
+    (e.ingredients || []).forEach(ing => {
+      ing.split(/[\s,]+/).filter(w => w.length > 3).forEach(w => {
+        dislikedIngWords[w] = (dislikedIngWords[w]||0)+1;
+      });
+    });
+  });
+  const topDislikedIngs = Object.entries(dislikedIngWords).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k])=>k);
+
+  return {
+    total, liked: liked.length, disliked: disliked.length,
+    likedDietary, dislikedDietary,
+    preferredDiff, avgTime,
+    topIngs, topDislikedIngs,
+    avgStars: (entries.reduce((s,e)=>s+e.stars,0)/total).toFixed(1)
+  };
+}
+
+function buildTasteContext() {
+  const p = buildTasteProfile();
+  if (!p || p.total < 2) return ''; // need at least 2 ratings to learn
+  let ctx = `\n--- פרופיל טעם אישי (למד מ-${p.total} דירוגים) ---\n`;
+  if (p.likedDietary.length) ctx += `המשתמש אוהב: ${p.likedDietary.join(', ')}\n`;
+  if (p.dislikedDietary.length) ctx += `פחות אוהב: ${p.dislikedDietary.join(', ')}\n`;
+  if (p.preferredDiff) ctx += `רמת קושי מועדפת: ${p.preferredDiff}\n`;
+  if (p.avgTime) ctx += `זמן בישול ממוצע אהוב: כ-${p.avgTime} דקות\n`;
+  if (p.topIngs.length) ctx += `מרכיבים שחוזרים במתכונים האהובים: ${p.topIngs.join(', ')}\n`;
+  if (p.topDislikedIngs.length) ctx += `מרכיבים שחוזרים במתכונים הפחות אהובים (נסה להמנע): ${p.topDislikedIngs.join(', ')}\n`;
+  ctx += `השתמש בפרופיל זה כדי להתאים את ההמלצות לטעם האישי של המשתמש.\n---`;
+  return ctx;
+}
+
+
 async function runAiMode(ingredients, dishRequest, filters, maxTime, difficulty, mealType, servings, apiKey) {
+  const tasteCtx = buildTasteContext();
   const prompt = `אתה שף מומחה ישראלי עם ניסיון של 20 שנה.
 ${dishRequest ? 'המשתמש רוצה להכין: ' + dishRequest : ''}
 ${ingredients ? 'מרכיבים זמינים: ' + ingredients : ''}
@@ -1318,7 +1410,9 @@ ${maxTime ? `זמן הכנה מקסימלי: ${maxTime} דקות` : ''}
 ${difficulty ? `רמת קושי רצויה: ${difficulty}` : ''}
 ${mealType ? `סוג ארוחה: ${mealType}` : ''}
 מספר סועדים: ${servings}
+${tasteCtx}
 המצא 3 מתכונים מקוריים. זהה תגי dietary. סמן אחד כ-isBest:true עם bestReason.
+${tasteCtx ? 'בחר את isBest לפי התאמה לפרופיל הטעם האישי.' : ''}
 החזר JSON בלבד:
 {"recipes":[{"name":"","description":"","time":30,"difficulty":"קל","servings":${servings},"dietary":[],"isBest":false,"bestReason":"","ingredients":[""],"steps":[""],"nutrition":{"calories":350,"protein":25,"carbs":30,"fat":12},"tip":""}]}`;
   const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -1622,6 +1716,51 @@ function renderStats() {
   const uniqueCooked = Object.keys(cookedCount).length;
 
   document.getElementById('statsContent').innerHTML = `
+    ${(() => {
+      const p = buildTasteProfile();
+      if (!p || p.total < 2) return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:20px;text-align:center;color:var(--muted);font-size:0.88rem">
+        🧠 <strong style="color:var(--accent)">פרופיל טעם אישי</strong><br><span style="font-size:0.8rem">דרג לפחות 2 מתכונים כדי שהאפליקציה תתחיל ללמוד את הטעם שלך</span>
+      </div>`;
+      const strengthPct = Math.min(100, Math.round((p.total / 10) * 100));
+      const bars = '█'.repeat(Math.round(strengthPct/10)) + '░'.repeat(10-Math.round(strengthPct/10));
+      return `
+      <div style="background:linear-gradient(135deg,rgba(232,184,109,0.08),rgba(232,184,109,0.03));border:1px solid rgba(232,184,109,0.3);border-radius:var(--radius);padding:20px;margin-bottom:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+          <div style="font-family:'Frank Ruhl Libre',serif;font-size:1.1rem;color:var(--accent);font-weight:700">🧠 פרופיל טעם אישי</div>
+          <div style="font-size:0.76rem;color:var(--muted)">למד מ-${p.total} דירוגים | ממוצע ${p.avgStars}★</div>
+        </div>
+        <div style="margin-bottom:12px">
+          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:4px">עוצמת הפרופיל</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="font-family:monospace;color:var(--accent);font-size:0.8rem;letter-spacing:1px">${bars}</div>
+            <span style="font-size:0.78rem;color:var(--muted)">${strengthPct}%</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+          ${p.likedDietary.length ? `<div style="background:rgba(92,184,92,0.08);border:1px solid rgba(92,184,92,0.2);border-radius:10px;padding:10px">
+            <div style="font-size:0.7rem;color:#7ddb7d;margin-bottom:6px;font-weight:700">✅ אוהב</div>
+            <div style="font-size:0.82rem">${p.likedDietary.join(' · ')}</div>
+          </div>` : ''}
+          ${p.dislikedDietary.length ? `<div style="background:rgba(192,57,43,0.07);border:1px solid rgba(192,57,43,0.2);border-radius:10px;padding:10px">
+            <div style="font-size:0.7rem;color:#e74c3c;margin-bottom:6px;font-weight:700">❌ פחות אוהב</div>
+            <div style="font-size:0.82rem">${p.dislikedDietary.join(' · ')}</div>
+          </div>` : ''}
+          ${p.preferredDiff ? `<div style="background:rgba(126,176,247,0.08);border:1px solid rgba(126,176,247,0.2);border-radius:10px;padding:10px">
+            <div style="font-size:0.7rem;color:#7eb0f7;margin-bottom:6px;font-weight:700">👨‍🍳 רמת קושי מועדפת</div>
+            <div style="font-size:0.82rem">${p.preferredDiff}</div>
+          </div>` : ''}
+          ${p.avgTime ? `<div style="background:rgba(232,184,109,0.08);border:1px solid rgba(232,184,109,0.2);border-radius:10px;padding:10px">
+            <div style="font-size:0.7rem;color:var(--accent);margin-bottom:6px;font-weight:700">⏱️ זמן בישול אהוב</div>
+            <div style="font-size:0.82rem">כ-${p.avgTime} דקות</div>
+          </div>` : ''}
+          ${p.topIngs.length ? `<div style="background:rgba(232,184,109,0.06);border:1px solid rgba(232,184,109,0.15);border-radius:10px;padding:10px;grid-column:span 2">
+            <div style="font-size:0.7rem;color:var(--accent);margin-bottom:6px;font-weight:700">🥕 מרכיבים שאתה נוטה לאהוב</div>
+            <div style="display:flex;flex-wrap:wrap;gap:5px">${p.topIngs.map(i=>`<span style="background:rgba(232,184,109,0.12);border-radius:50px;padding:2px 9px;font-size:0.76rem;color:var(--accent)">${i}</span>`).join('')}</div>
+          </div>` : ''}
+        </div>
+        <div style="margin-top:12px;font-size:0.76rem;color:var(--muted);text-align:center">💡 ההמלצות שלך מותאמות אוטומטית לפרופיל זה בכל חיפוש</div>
+      </div>`;
+    })()}
     <div class="stats-grid">
       <div class="stat-box"><div class="stat-val">${totalFav}</div><div class="stat-label">❤️ מועדפים</div></div>
       <div class="stat-box"><div class="stat-val">${totalMine}</div><div class="stat-label">📚 מתכוניי</div></div>
