@@ -1753,15 +1753,12 @@ import {
   getAuth,
   onAuthStateChanged,
   signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   updateProfile,
   deleteUser,
-  reauthenticateWithRedirect,
   reauthenticateWithCredential,
   EmailAuthProvider,
   signOut as fbSignOut
@@ -1778,7 +1775,7 @@ import {
 
 const firebaseConfig = {
   apiKey: "AIzaSyAi3l86qRDzfEjIdqJuKS4ZfUfPnzQg2Uw",
-  authDomain: "tsipkat16.github.io",
+  authDomain: "my-chef-ai-internet.firebaseapp.com",
   projectId: "my-chef-ai-internet",
   storageBucket: "my-chef-ai-internet.firebasestorage.app",
   messagingSenderId: "160903146532",
@@ -1809,12 +1806,19 @@ window.switchAuthTab = (mode) => {
 };
 
 window.signInWithGoogle = async () => {
+  const errEl = document.getElementById('authError');
+  errEl.textContent = '';
+  errEl.style.color = '#e74c3c';
   try {
-    document.getElementById('authError').textContent = '';
-    // Use redirect (works on GitHub Pages / any domain)
-    await signInWithRedirect(auth, googleProvider);
+    await signInWithPopup(auth, googleProvider);
   } catch(e) {
-    document.getElementById('authError').textContent = getAuthError(e.code);
+    if (e.code === 'auth/popup-blocked') {
+      errEl.textContent = '⚠️ הדפדפן חסם את החלון — אפשר חלונות קופצים ונסה שוב';
+    } else if (e.code === 'auth/popup-closed-by-user') {
+      errEl.textContent = '';
+    } else {
+      errEl.textContent = getAuthError(e.code);
+    }
   }
 };
 
@@ -1867,19 +1871,6 @@ function getAuthError(code) {
 }
 
 // ─── AUTH STATE ───────────────────────────────────────────────
-// First, handle any pending redirect result from Google sign-in
-getRedirectResult(auth)
-  .then((result) => {
-    // result is null if no redirect happened — that's fine
-    // onAuthStateChanged will fire next and handle everything
-  })
-  .catch((e) => {
-    if (e && e.code && e.code !== 'auth/no-current-user') {
-      const errEl = document.getElementById('authError');
-      if (errEl) errEl.textContent = getAuthError(e.code);
-    }
-  });
-
 onAuthStateChanged(auth, async (user) => {
   const loadingScreen = document.getElementById('loadingScreen');
   const authScreen = document.getElementById('authScreen');
