@@ -294,6 +294,12 @@
   .toast { position: fixed; bottom: 24px; right: 24px; background: var(--card); border: 1px solid var(--accent); border-radius: 12px; padding: 12px 20px; font-size: 0.88rem; color: var(--text); z-index: 9999; animation: toastIn 0.3s ease; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
   @keyframes toastIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 
+  /* LOADING SCREEN */
+  #loadingScreen { position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+  .loading-logo { font-family: 'Frank Ruhl Libre', serif; font-size: 2rem; font-weight: 900; color: var(--accent); }
+  .loading-spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  .loading-text { font-size: 0.82rem; color: var(--muted); }
+
   /* AUTH SCREEN */
   #authScreen { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
   .auth-card { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 40px 36px; max-width: 420px; width: 100%; text-align: center; }
@@ -365,6 +371,13 @@
 </style>
 </head>
 <body>
+
+<!-- LOADING SCREEN -->
+<div id="loadingScreen">
+  <div class="loading-logo">🍽️ מתכון בקליק</div>
+  <div class="loading-spinner"></div>
+  <div class="loading-text">טוען...</div>
+</div>
 
 <!-- AUTH SCREEN -->
 <div id="authScreen" style="display:none">
@@ -1750,14 +1763,6 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 
-// Handle redirect result (Google sign-in returns here after redirect)
-getRedirectResult(auth).catch((e) => {
-  if (e && e.code) {
-    const errEl = document.getElementById('authError');
-    if (errEl) errEl.textContent = getAuthError(e.code);
-  }
-});
-
 let currentUser = null;
 let firestoreUnsubscribe = null;
 let syncTimeout = null;
@@ -1833,11 +1838,43 @@ function getAuthError(code) {
 }
 
 // ─── AUTH STATE ───────────────────────────────────────────────
+// First, handle any pending redirect result from Google sign-in
+getRedirectResult(auth)
+  .then((result) => {
+    // result is null if no redirect happened — that's fine
+    // onAuthStateChanged will fire next and handle everything
+  })
+  .catch((e) => {
+    if (e && e.code && e.code !== 'auth/no-current-user') {
+      const errEl = document.getElementById('authError');
+      if (errEl) errEl.textContent = getAuthError(e.code);
+    }
+  });
+
 onAuthStateChanged(auth, async (user) => {
+  const loadingScreen = document.getElementById('loadingScreen');
   const authScreen = document.getElementById('authScreen');
   const userBadge = document.getElementById('userBadge');
 
+  // Always hide loading screen once auth state is known
+  if (loadingScreen) loadingScreen.style.display = 'none';
+
   if (user) {
+    // Handle pending delete after re-auth
+    if (sessionStorage.getItem('pendingDelete') === '1') {
+      sessionStorage.removeItem('pendingDelete');
+      try {
+        const uid = user.uid;
+        await deleteDoc(doc(db, 'users', uid));
+        ['favorites_v1','ratings_v1','cooked_log_v1','recipe_notes_v1','myRecipes_v2'].forEach(k => localStorage.removeItem(k));
+        await deleteUser(user);
+        window.showToast('✅ החשבון נמחק בהצלחה');
+      } catch(e) {
+        window.showToast('שגיאת מחיקה: ' + e.message, 4000);
+      }
+      return;
+    }
+
     currentUser = user;
     authScreen.style.display = 'none';
     userBadge.style.display = 'flex';
@@ -2000,22 +2037,6 @@ window.executeDeleteAccount = async () => {
     }
   }
 };
-
-// Check if we returned from re-auth with pending delete
-onAuthStateChanged(auth, async (user) => {
-  if (user && sessionStorage.getItem('pendingDelete') === '1') {
-    sessionStorage.removeItem('pendingDelete');
-    try {
-      const uid = user.uid;
-      await deleteDoc(doc(db, 'users', uid));
-      ['favorites_v1','ratings_v1','cooked_log_v1','recipe_notes_v1','myRecipes_v2'].forEach(k => localStorage.removeItem(k));
-      await deleteUser(user);
-      window.showToast('✅ החשבון נמחק בהצלחה');
-    } catch(e) {
-      window.showToast('שגיאת מחיקה: ' + e.message, 4000);
-    }
-  }
-});
 </script>
 <!-- DELETE ACCOUNT MODAL -->
 <div id="deleteAccountModal">
