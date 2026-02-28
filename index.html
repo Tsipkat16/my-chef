@@ -329,6 +329,23 @@
   .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #5cb85c; margin-right: 4px; display: inline-block; animation: syncPulse 2s ease-in-out infinite; }
   @keyframes syncPulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
+  /* DELETE ACCOUNT MODAL */
+  #deleteAccountModal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+  #deleteAccountModal.open { display: flex; }
+  .delete-modal-card { background: var(--card); border: 1px solid #e74c3c; border-radius: 20px; padding: 36px 32px; max-width: 400px; width: 100%; text-align: center; animation: modalIn 0.25s ease; }
+  .delete-modal-icon { font-size: 3rem; margin-bottom: 12px; }
+  .delete-modal-title { font-family: 'Frank Ruhl Libre', serif; font-size: 1.4rem; font-weight: 900; color: #e74c3c; margin-bottom: 10px; }
+  .delete-modal-text { font-size: 0.88rem; color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+  .delete-modal-warning { background: rgba(231,76,60,0.1); border: 1px solid rgba(231,76,60,0.3); border-radius: 10px; padding: 12px 14px; font-size: 0.82rem; color: #e74c3c; margin-bottom: 20px; text-align: right; }
+  .delete-confirm-input { width: 100%; background: var(--bg); border: 1.5px solid #e74c3c; border-radius: 10px; padding: 11px 14px; color: var(--text); font-family: 'Heebo', sans-serif; font-size: 0.92rem; margin-bottom: 16px; text-align: center; direction: ltr; }
+  .delete-confirm-input:focus { outline: none; }
+  .delete-confirm-input::placeholder { color: var(--muted); }
+  .delete-btn-final { width: 100%; padding: 12px; border-radius: 12px; border: none; background: #e74c3c; color: #fff; font-family: 'Heebo', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: all 0.2s; margin-bottom: 10px; opacity: 0.4; }
+  .delete-btn-final.ready { opacity: 1; }
+  .delete-btn-final.ready:hover { background: #c0392b; transform: translateY(-1px); }
+  .delete-cancel-btn { background: none; border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 24px; color: var(--text); font-family: 'Heebo', sans-serif; font-size: 0.88rem; cursor: pointer; transition: all 0.2s; }
+  .delete-cancel-btn:hover { border-color: var(--muted); }
+
   /* Print styles */
   @media print {
     header, .api-key-bar, .nav-btns, .mode-tabs, .input-section, .generate-btn, .modal-overlay, .modal-close, .modal-actions, .timer-box, .servings-scaler { display: none !important; }
@@ -393,6 +410,7 @@
           <button class="user-menu-item" onclick="showUserProfile()">👤 הפרופיל שלי</button>
           <button class="user-menu-item" onclick="syncNow()"><span class="sync-dot"></span>סנכרן עכשיו</button>
           <button class="user-menu-item" style="color:#e74c3c" onclick="signOut()">🚪 יציאה</button>
+          <button class="user-menu-item" style="color:#e74c3c;border-top:1px solid var(--border);margin-top:4px;padding-top:10px" onclick="confirmDeleteAccount()">🗑️ מחק חשבון</button>
         </div>
       </div>
     </div>
@@ -1700,6 +1718,10 @@ import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   updateProfile,
+  deleteUser,
+  reauthenticateWithRedirect,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
   signOut as fbSignOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
@@ -1707,6 +1729,7 @@ import {
   doc,
   setDoc,
   getDoc,
+  deleteDoc,
   onSnapshot,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -1916,6 +1939,100 @@ window.syncNow = async () => {
 window.showUserProfile = () => {
   window.showToast(`👤 ${currentUser?.displayName || currentUser?.email || 'משתמש'}`);
 };
+
+// ─── DELETE ACCOUNT ───────────────────────────────────────────
+window.confirmDeleteAccount = () => {
+  document.getElementById('deleteConfirmInput').value = '';
+  document.getElementById('deleteFinalBtn').disabled = true;
+  document.getElementById('deleteFinalBtn').classList.remove('ready');
+  document.getElementById('deleteAccountModal').classList.add('open');
+};
+
+window.closeDeleteModal = () => {
+  document.getElementById('deleteAccountModal').classList.remove('open');
+};
+
+window.checkDeleteConfirm = () => {
+  const val = document.getElementById('deleteConfirmInput').value.trim();
+  const btn = document.getElementById('deleteFinalBtn');
+  const confirmed = val === 'מחק חשבון';
+  btn.disabled = !confirmed;
+  btn.classList.toggle('ready', confirmed);
+};
+
+window.executeDeleteAccount = async () => {
+  if (!currentUser) return;
+  const btn = document.getElementById('deleteFinalBtn');
+  btn.textContent = '⏳ מוחק...';
+  btn.disabled = true;
+
+  try {
+    const uid = currentUser.uid;
+
+    // 1. Delete Firestore data
+    await deleteDoc(doc(db, 'users', uid));
+
+    // 2. Clear localStorage
+    ['favorites_v1','ratings_v1','cooked_log_v1','recipe_notes_v1','myRecipes_v2'].forEach(k => localStorage.removeItem(k));
+    window.favorites = []; window.ratings = {}; window.cookedLog = [];
+    window.recipeNotes = {}; window.myRecipes = [];
+
+    // 3. Delete Firebase Auth account
+    // May throw requires-recent-login — handle gracefully
+    await deleteUser(currentUser);
+
+    window.closeDeleteModal();
+    window.showToast('✅ החשבון נמחק בהצלחה');
+
+  } catch (e) {
+    if (e.code === 'auth/requires-recent-login') {
+      // Re-auth needed — sign them out so they can log in fresh, then delete
+      window.closeDeleteModal();
+      window.showToast('🔐 נדרש אימות מחדש — נא להתחבר שוב ולנסות', 4000);
+      // Store a flag so after re-login we auto-delete
+      sessionStorage.setItem('pendingDelete', '1');
+      await fbSignOut(auth);
+    } else {
+      btn.textContent = '🗑️ מחק את החשבון שלי לצמיתות';
+      btn.disabled = false;
+      btn.classList.add('ready');
+      window.showToast('שגיאה: ' + (e.message || e.code), 4000);
+    }
+  }
+};
+
+// Check if we returned from re-auth with pending delete
+onAuthStateChanged(auth, async (user) => {
+  if (user && sessionStorage.getItem('pendingDelete') === '1') {
+    sessionStorage.removeItem('pendingDelete');
+    try {
+      const uid = user.uid;
+      await deleteDoc(doc(db, 'users', uid));
+      ['favorites_v1','ratings_v1','cooked_log_v1','recipe_notes_v1','myRecipes_v2'].forEach(k => localStorage.removeItem(k));
+      await deleteUser(user);
+      window.showToast('✅ החשבון נמחק בהצלחה');
+    } catch(e) {
+      window.showToast('שגיאת מחיקה: ' + e.message, 4000);
+    }
+  }
+});
 </script>
+<!-- DELETE ACCOUNT MODAL -->
+<div id="deleteAccountModal">
+  <div class="delete-modal-card">
+    <div class="delete-modal-icon">⚠️</div>
+    <div class="delete-modal-title">מחיקת חשבון</div>
+    <div class="delete-modal-text">פעולה זו <strong>בלתי הפיכה</strong>. כל הנתונים שלך יימחקו לצמיתות:</div>
+    <div class="delete-modal-warning">
+      ❤️ מועדפים · ⭐ דירוגים · 🍳 יומן בישול<br>
+      📝 הערות אישיות · 📚 המתכונים שלי
+    </div>
+    <div style="font-size:0.82rem;color:var(--muted);margin-bottom:10px">כדי לאשר, הקלד <strong style="color:var(--text)">מחק חשבון</strong> בשדה:</div>
+    <input class="delete-confirm-input" id="deleteConfirmInput" placeholder='הקלד "מחק חשבון"' oninput="checkDeleteConfirm()">
+    <button class="delete-btn-final" id="deleteFinalBtn" onclick="executeDeleteAccount()" disabled>🗑️ מחק את החשבון שלי לצמיתות</button>
+    <button class="delete-cancel-btn" onclick="closeDeleteModal()">ביטול</button>
+  </div>
+</div>
+
 </body>
 </html>
