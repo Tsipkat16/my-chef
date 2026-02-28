@@ -27,8 +27,17 @@
     --border: #2a2a2a;
     --radius: 16px;
   }
+  body.light-mode {
+    --bg: #f5f0e8;
+    --surface: #fffdf7;
+    --card: #ffffff;
+    --text: #1a1208;
+    --muted: #6b6050;
+    --border: #e0d8c8;
+    --surface: #faf5ec;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'Heebo', sans-serif; min-height: 100vh; direction: rtl; }
+  body { background: var(--bg); color: var(--text); font-family: 'Heebo', sans-serif; min-height: 100vh; direction: rtl; transition: background 0.3s, color 0.3s; }
 
   header {
     background: linear-gradient(135deg, #1a1208 0%, #0d0d0d 60%);
@@ -36,10 +45,14 @@
     padding: 20px 32px;
     position: sticky; top: 0; z-index: 100;
   }
+  body.light-mode header { background: linear-gradient(135deg, #3d2b0e 0%, #5a3e1b 100%); }
   .header-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
   .logo { font-family: 'Frank Ruhl Libre', serif; font-size: 1.8rem; font-weight: 900; color: var(--accent); display: flex; align-items: center; gap: 8px; }
-  .tagline { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
-  .nav-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tagline { font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 2px; }
+  .nav-btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+  .theme-toggle { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 50px; padding: 6px 12px; color: #fff; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; }
+  .theme-toggle:hover { background: rgba(255,255,255,0.2); }
 
   .container { max-width: 1100px; margin: 0 auto; padding: 28px 20px; }
 
@@ -48,6 +61,13 @@
   .ingredients-input { width: 100%; background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; color: var(--text); font-family: 'Heebo', sans-serif; font-size: 1rem; resize: vertical; min-height: 76px; direction: rtl; }
   .ingredients-input:focus { outline: none; border-color: var(--accent); }
   .ingredients-input::placeholder { color: var(--muted); }
+
+  /* History chips */
+  .history-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .history-chip { background: rgba(232,184,109,0.1); border: 1px solid rgba(232,184,109,0.25); border-radius: 50px; padding: 3px 10px; font-size: 0.75rem; color: var(--accent); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px; }
+  .history-chip:hover { background: rgba(232,184,109,0.22); }
+  .history-chip .chip-del { opacity: 0.5; font-size: 0.7rem; }
+  .history-chip .chip-del:hover { opacity: 1; }
 
   .filters-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; align-items: center; }
   .filter-label { font-size: 0.82rem; color: var(--muted); }
@@ -73,9 +93,16 @@
   .generate-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(232,184,109,0.3); }
   .generate-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
+  /* Live search bar */
+  .search-bar-wrap { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }
+  .live-search-input { flex: 1; background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px; padding: 9px 14px; color: var(--text); font-family: 'Heebo', sans-serif; font-size: 0.88rem; direction: rtl; }
+  .live-search-input:focus { outline: none; border-color: var(--accent); }
+  .live-search-input::placeholder { color: var(--muted); }
+  .results-count { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+
   .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 18px; }
 
-  .recipe-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: all 0.25s; animation: fadeUp 0.4s ease both; }
+  .recipe-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: all 0.25s; animation: fadeUp 0.4s ease both; position: relative; }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
   .recipe-card:hover { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 10px 36px rgba(232,184,109,0.14); }
   .card-body { padding: 18px; }
@@ -90,15 +117,27 @@
   .dietary-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
   .dtag { background: rgba(255,255,255,0.06); border-radius: 4px; padding: 2px 7px; font-size: 0.7rem; color: var(--muted); }
 
+  /* Favorite button on card */
+  .fav-btn-card { position: absolute; top: 12px; left: 12px; background: rgba(0,0,0,0.4); border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; transition: all 0.2s; z-index: 2; }
+  .fav-btn-card:hover { background: rgba(232,184,109,0.3); transform: scale(1.15); }
+  .fav-btn-card.active { background: rgba(232,57,57,0.2); }
+
+  /* Star rating on card */
+  .card-stars { display: flex; gap: 2px; margin-top: 8px; }
+  .star { font-size: 0.9rem; cursor: pointer; opacity: 0.3; transition: opacity 0.15s, transform 0.15s; }
+  .star.filled { opacity: 1; }
+  .star:hover { transform: scale(1.2); }
+
   .add-to-plan-btn { display: none; }
 
+  /* MODAL */
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.82); z-index: 1000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
   .modal-overlay.open { display: flex; }
-  .modal { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 28px; max-width: 660px; width: 100%; max-height: 88vh; overflow-y: auto; animation: modalIn 0.28s ease; direction: rtl; }
+  .modal { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 28px; max-width: 680px; width: 100%; max-height: 90vh; overflow-y: auto; animation: modalIn 0.28s ease; direction: rtl; }
   @keyframes modalIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
   .modal-close { float: left; background: var(--border); border: none; color: var(--text); width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; }
   .modal-title { font-family: 'Frank Ruhl Libre', serif; font-size: 1.7rem; font-weight: 900; color: var(--accent); margin-bottom: 4px; clear: both; margin-top: 8px; }
-  .modal-subtitle { font-size: 0.83rem; color: var(--muted); margin-bottom: 20px; }
+  .modal-subtitle { font-size: 0.83rem; color: var(--muted); margin-bottom: 16px; }
   .recipe-section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin: 18px 0 8px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
   .ingredients-list { list-style: none; }
   .ingredients-list li { padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 0.88rem; display: flex; align-items: center; gap: 8px; }
@@ -111,7 +150,53 @@
   .nutr-val { font-size: 1.2rem; font-weight: 700; color: var(--accent); }
   .nutr-label { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
 
+  /* Modal action bar */
+  .modal-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .modal-action-btn { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg); color: var(--text); font-family: 'Heebo', sans-serif; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; }
+  .modal-action-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .modal-action-btn.fav-active { border-color: #e74c3c; color: #e74c3c; background: rgba(231,76,60,0.08); }
+  .modal-action-btn.cart-added { border-color: var(--green); color: var(--green); background: rgba(92,184,92,0.08); }
 
+  /* Servings scaler */
+  .servings-scaler { display: flex; align-items: center; gap: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin: 14px 0; }
+  .servings-scaler label { font-size: 0.82rem; color: var(--muted); }
+  .servings-scaler .scale-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; width: 28px; height: 28px; color: var(--text); font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .servings-scaler .scale-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .servings-scaler .scale-num { font-weight: 700; font-size: 1rem; color: var(--accent); min-width: 24px; text-align: center; }
+
+  /* Timer */
+  .timer-box { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin: 14px 0; }
+  .timer-display { font-size: 2.2rem; font-weight: 900; color: var(--accent); font-family: monospace; text-align: center; letter-spacing: 2px; }
+  .timer-display.running { animation: timerPulse 1s ease-in-out infinite; }
+  .timer-display.done { color: #e74c3c; animation: none; }
+  @keyframes timerPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+  .timer-controls { display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+  .timer-preset { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; color: var(--muted); font-size: 0.76rem; cursor: pointer; transition: all 0.2s; }
+  .timer-preset:hover { border-color: var(--accent); color: var(--accent); }
+  .timer-start-btn { background: var(--accent); border: none; border-radius: 8px; padding: 7px 18px; color: #0d0d0d; font-weight: 700; font-size: 0.82rem; cursor: pointer; }
+  .timer-stop-btn { background: rgba(192,57,43,0.15); border: none; border-radius: 8px; padding: 7px 18px; color: #e74c3c; font-weight: 700; font-size: 0.82rem; cursor: pointer; }
+  .timer-input-wrap { display: flex; gap: 6px; align-items: center; justify-content: center; margin-bottom: 10px; }
+  .timer-input-wrap input { width: 56px; background: var(--surface); border: 1.5px solid var(--border); border-radius: 8px; padding: 5px 8px; color: var(--text); font-size: 0.9rem; text-align: center; }
+
+  /* Shopping list page */
+  .shop-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+  .shop-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+  .shop-item.checked span { text-decoration: line-through; color: var(--muted); }
+  .shop-item .item-recipe { font-size: 0.72rem; color: var(--muted); margin-right: auto; }
+  .shop-list-box { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 16px; }
+  .shop-list-header { padding: 14px 18px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .shop-list-header h3 { font-family: 'Frank Ruhl Libre', serif; color: var(--accent); font-size: 1rem; }
+  .clear-shop-btn { background: rgba(192,57,43,0.12); border: none; border-radius: 8px; padding: 5px 12px; color: #e74c3c; font-size: 0.78rem; cursor: pointer; }
+  .clear-shop-btn:hover { background: rgba(192,57,43,0.25); }
+  .shop-empty { text-align: center; padding: 40px; color: var(--muted); font-size: 0.9rem; }
+  .shop-actions { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .shop-copy-btn { background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px; padding: 8px 16px; color: var(--text); font-size: 0.84rem; cursor: pointer; transition: all 0.2s; }
+  .shop-copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Favorites badge */
+  .fav-count-badge { background: #e74c3c; color: #fff; border-radius: 50%; width: 18px; height: 18px; font-size: 0.65rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; margin-right: 4px; vertical-align: middle; }
+
+  /* Forms */
   .add-recipe-form { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; margin-bottom: 22px; }
   .add-recipe-form h3 { font-family: 'Frank Ruhl Libre', serif; font-size: 1.05rem; color: var(--accent); margin-bottom: 14px; }
   .form-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
@@ -146,7 +231,8 @@
     gap: 10px;
     flex-wrap: wrap;
   }
-  .api-key-bar label { font-size: 0.82rem; color: var(--muted); white-space: nowrap; }
+  body.light-mode .api-key-bar { background: linear-gradient(135deg, #3a2508, #4a3010); }
+  .api-key-bar label { font-size: 0.82rem; color: rgba(255,255,255,0.55); white-space: nowrap; }
   .api-key-input {
     flex: 1;
     min-width: 220px;
@@ -162,12 +248,7 @@
     letter-spacing: 1px;
   }
   .api-key-input:focus { outline: none; border-color: var(--accent); }
-  .api-key-status {
-    font-size: 0.78rem;
-    padding: 4px 10px;
-    border-radius: 50px;
-    font-weight: 700;
-  }
+  .api-key-status { font-size: 0.78rem; padding: 4px 10px; border-radius: 50px; font-weight: 700; }
   .api-key-status.ok { background: rgba(92,184,92,0.15); color: #7ddb7d; }
   .api-key-status.missing { background: rgba(192,57,43,0.15); color: #e74c3c; }
   .api-key-status.invalid { background: rgba(192,57,43,0.2); color: #ff6b6b; }
@@ -194,9 +275,25 @@
   .nutrition-bar-fill { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
   .nutrition-bar-val { font-size: 0.75rem; color: var(--text); width: 55px; }
 
+  /* Toast notification */
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--card); border: 1px solid var(--accent); border-radius: 12px; padding: 12px 20px; font-size: 0.88rem; color: var(--text); z-index: 9999; animation: toastIn 0.3s ease; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Print styles */
+  @media print {
+    header, .api-key-bar, .nav-btns, .mode-tabs, .input-section, .generate-btn, .modal-overlay, .modal-close, .modal-actions, .timer-box, .servings-scaler { display: none !important; }
+    body { background: white; color: black; }
+    .modal { box-shadow: none; max-height: none; overflow: visible; border: none; }
+    .modal-overlay.open { display: block; position: relative; padding: 0; background: none; }
+    .recipe-section-title { border-color: #ccc; color: #333; }
+    .modal-title { color: #333; }
+  }
+
   @media (max-width: 600px) {
     .mode-tab { font-size: 0.75rem; }
     .nutritional-grid { grid-template-columns: repeat(2, 1fr); }
+    .modal-actions { gap: 6px; }
+    .modal-action-btn { padding: 7px 10px; font-size: 0.76rem; }
   }
 </style>
 </head>
@@ -210,7 +307,10 @@
     </div>
     <div class="nav-btns">
       <button class="filter-btn active" id="nav-search" onclick="showPage('search',this)">🔍 חיפוש מתכונים</button>
+      <button class="filter-btn" id="nav-favorites" onclick="showPage('favorites',this)">❤️ מועדפים <span class="fav-count-badge" id="favBadge" style="display:none">0</span></button>
+      <button class="filter-btn" id="nav-shop" onclick="showPage('shop',this)">🛒 קניות <span class="fav-count-badge" id="shopBadge" style="display:none;background:#7ddb7d">0</span></button>
       <button class="filter-btn" id="nav-mine" onclick="showPage('mine',this)">📚 המתכונים שלי</button>
+      <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 לילה</button>
     </div>
   </div>
 </header>
@@ -235,6 +335,7 @@
   <div class="input-section">
     <h2>🍽️ מה תרצה להכין? <span style="font-size:0.75rem;color:var(--muted);font-weight:400">(לא חובה)</span></h2>
     <textarea class="ingredients-input" id="dishInput" placeholder="לדוגמה: פסטה קרבונרה, עוגת שוקולד, מרק עוף...&#10;(לא חובה — אפשר להשאיר ריק)"></textarea>
+    <div class="history-chips" id="historyChips"></div>
     <h2 style="margin-top:16px">🥕 מה יש לך במטבח? <span style="font-size:0.75rem;color:var(--muted);font-weight:400">(לא חובה)</span></h2>
     <textarea class="ingredients-input" id="ingredientsInput" placeholder="לדוגמה: עוף, בצל, עגבניות, שום...&#10;(לא חובה — אפשר להשאיר ריק)"></textarea>
     <div class="filters-row">
@@ -248,8 +349,7 @@
       <button class="filter-btn" onclick="toggleFilter(this,'עשיר בחלבון')">💪 עשיר בחלבון</button>
     </div>
     <div class="custom-row">
-      <label>👥 סועדים:</label>
-      <input type="number" id="servings" value="4" min="1" max="20" style="width:64px">
+      <input type="number" id="servings" value="4" min="1" max="20" style="display:none">
       <label>⏱️ זמן מקסימלי:</label>
       <select id="maxTime">
         <option value="">ללא הגבלה</option>
@@ -279,7 +379,7 @@
     <button class="generate-btn" id="generateBtn" onclick="generateRecipes()">✨ מצאי לי מתכונים!</button>
   </div>
 
-  <!-- MODE TABS - multi select -->
+  <!-- MODE TABS -->
   <div class="mode-tabs">
     <button class="mode-tab active" id="tab-ai" onclick="toggleMode('ai',this)">
       <span class="tab-icon">🤖</span>
@@ -298,6 +398,12 @@
     </button>
   </div>
 
+  <!-- LIVE SEARCH BAR (hidden until results) -->
+  <div class="search-bar-wrap" id="liveSearchWrap" style="display:none">
+    <input class="live-search-input" id="liveSearchInput" placeholder="🔍 חפש בתוצאות..." oninput="filterResults(this.value)">
+    <span class="results-count" id="resultsCount"></span>
+  </div>
+
   <!-- RESULTS -->
   <div id="resultsArea">
     <div class="empty-state">
@@ -307,7 +413,38 @@
     </div>
   </div>
 
+</div>
+</div>
 
+<!-- FAVORITES PAGE -->
+<div class="page" id="page-favorites">
+<div class="container">
+  <div class="section-header">
+    <h2>❤️ מתכונים שמורים</h2>
+    <span id="favCount" style="color:var(--muted);font-size:0.82rem"></span>
+  </div>
+  <div id="favoritesGrid" class="results-grid"></div>
+</div>
+</div>
+
+<!-- SHOPPING LIST PAGE -->
+<div class="page" id="page-shop">
+<div class="container">
+  <div class="section-header">
+    <h2>🛒 רשימת קניות</h2>
+    <span id="shopCount" style="color:var(--muted);font-size:0.82rem"></span>
+  </div>
+  <div class="shop-actions">
+    <button class="shop-copy-btn" onclick="copyShoppingList()">📋 העתק רשימה</button>
+    <button class="shop-copy-btn" onclick="clearCheckedItems()">✅ נקה מסומנים</button>
+    <button class="shop-copy-btn" style="color:#e74c3c" onclick="clearAllShop()">🗑️ נקה הכל</button>
+  </div>
+  <div class="shop-list-box">
+    <div class="shop-list-header">
+      <h3>🛍️ פריטים לקנייה</h3>
+    </div>
+    <div id="shopItems"></div>
+  </div>
 </div>
 </div>
 
@@ -382,283 +519,432 @@
 </div>
 
 <script>
+// ============================================================
+// STATE
+// ============================================================
+let activeFilters = new Set();
+let currentMode = 'ai';
+let myRecipes = JSON.parse(localStorage.getItem('myRecipes_v2') || '[]');
+let favorites = JSON.parse(localStorage.getItem('favorites_v1') || '[]');
+let shoppingList = JSON.parse(localStorage.getItem('shopping_v1') || '[]');
+let ratings = JSON.parse(localStorage.getItem('ratings_v1') || '{}');
+let searchHistory = JSON.parse(localStorage.getItem('search_history_v1') || '[]');
+let lastRecipes = [];
+let allRenderedRecipes = [];
+const modeResults = { ai: null, web: null };
+const activeModes = new Set(['ai']);
+
+// Timer state
+let timerInterval = null;
+let timerSeconds = 0;
+let timerRunning = false;
+let currentModalRecipe = null;
+let currentServingsScale = 1;
+let baseServings = 4;
+
+// ============================================================
+// THEME
+// ============================================================
+function toggleTheme() {
+  document.body.classList.toggle('light-mode');
+  const btn = document.getElementById('themeBtn');
+  const isLight = document.body.classList.contains('light-mode');
+  btn.textContent = isLight ? '🌑 כהה' : '🌙 לילה';
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+}
+
+// ============================================================
+// API KEY STATUS
+// ============================================================
 function updateKeyStatus() {
   const v  = document.getElementById("apiKeyInput").value.trim();
   const sv = document.getElementById("serperKeyInput").value.trim();
   const s  = document.getElementById("apiKeyStatus");
   const ss = document.getElementById("serperKeyStatus");
-
   const isGroqKey   = k => k.startsWith("gsk_") && k.length > 20;
   const looksSerper = k => k.length > 10 && !k.startsWith("gsk_");
-
-  // --- Groq field ---
-  if (!v) {
-    s.textContent = "⚠️ חסר"; s.className = "api-key-status missing";
-  } else if (isGroqKey(v)) {
-    s.textContent = "✅ תקין"; s.className = "api-key-status ok";
-  } else if (looksSerper(v)) {
-    s.textContent = "🔀 זה המפתח של Serper"; s.className = "api-key-status warn";
-  } else {
-    s.textContent = "❌ לא תקין"; s.className = "api-key-status invalid";
-  }
-
-  // --- Serper field ---
-  if (!sv) {
-    ss.textContent = "⚠️ חסר"; ss.className = "api-key-status missing";
-  } else if (isGroqKey(sv)) {
-    ss.textContent = "🔀 זה המפתח של Groq"; ss.className = "api-key-status warn";
-  } else if (looksSerper(sv)) {
-    ss.textContent = "✅ תקין"; ss.className = "api-key-status ok";
-  } else {
-    ss.textContent = "❌ לא תקין"; ss.className = "api-key-status invalid";
-  }
-
-  // Save keys to localStorage
-  if (v)  localStorage.setItem('groq_key', v);
+  if (!v) { s.textContent = "⚠️ חסר"; s.className = "api-key-status missing"; }
+  else if (isGroqKey(v)) { s.textContent = "✅ תקין"; s.className = "api-key-status ok"; }
+  else if (looksSerper(v)) { s.textContent = "🔀 זה המפתח של Serper"; s.className = "api-key-status warn"; }
+  else { s.textContent = "❌ לא תקין"; s.className = "api-key-status invalid"; }
+  if (!sv) { ss.textContent = "⚠️ חסר"; ss.className = "api-key-status missing"; }
+  else if (isGroqKey(sv)) { ss.textContent = "🔀 זה המפתח של Groq"; ss.className = "api-key-status warn"; }
+  else if (looksSerper(sv)) { ss.textContent = "✅ תקין"; ss.className = "api-key-status ok"; }
+  else { ss.textContent = "❌ לא תקין"; ss.className = "api-key-status invalid"; }
+  if (v) localStorage.setItem('groq_key', v);
   if (sv) localStorage.setItem('serper_key', sv);
+}
+
+function copyKey(inputId, btnId) {
+  const val = document.getElementById(inputId).value.trim();
+  if (!val) { showToast('אין מפתח להעתקה'); return; }
+  navigator.clipboard.writeText(val).then(() => {
+    const btn = document.getElementById(btnId);
+    btn.textContent = '✅ הועתק!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 העתק'; btn.classList.remove('copied'); }, 2000);
+  });
 }
 
 function getApiKey() { return document.getElementById("apiKeyInput").value.trim(); }
 function getSerperKey() { return document.getElementById("serperKeyInput").value.trim(); }
 
-// Load saved keys on startup
-window.addEventListener('DOMContentLoaded', () => {
-  const groq = localStorage.getItem('groq_key');
-  const serper = localStorage.getItem('serper_key');
-  if (groq) { document.getElementById('apiKeyInput').value = groq; }
-  if (serper) { document.getElementById('serperKeyInput').value = serper; }
-  updateKeyStatus();
-});
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg, duration=2500) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), duration);
+}
 
-let activeFilters = new Set();
-let currentMode = 'ai';
-let myRecipes = JSON.parse(localStorage.getItem('myRecipes_v2') || '[]');
-let lastRecipes = [];
-const modeResults = { ai: null, web: null };
-
+// ============================================================
+// NAVIGATION
+// ============================================================
 function showPage(name, btn) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   document.querySelectorAll('.nav-btns .filter-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   if (name === 'mine') renderMyRecipes();
+  if (name === 'favorites') renderFavorites();
+  if (name === 'shop') renderShopList();
 }
 
+// ============================================================
+// FILTERS & MODES
+// ============================================================
 function toggleFilter(btn, name) {
   activeFilters.has(name) ? activeFilters.delete(name) : activeFilters.add(name);
   btn.classList.toggle('active');
 }
 
-// Multi-select modes
-const activeModes = new Set(['ai']);
-
 function toggleMode(mode, btn) {
   if (activeModes.has(mode)) {
-    if (activeModes.size === 1) return; // keep at least one
-    activeModes.delete(mode);
-    btn.classList.remove('active');
+    if (activeModes.size === 1) return;
+    activeModes.delete(mode); btn.classList.remove('active');
   } else {
-    activeModes.add(mode);
-    btn.classList.add('active');
+    activeModes.add(mode); btn.classList.add('active');
   }
 }
 
-async function runWebMode(ingredients, dishRequest, filters, maxTime, servings, apiKey) {
-  const serperKey = getSerperKey();
-  if (!serperKey || serperKey.length < 10) throw new Error('חסר מפתח Serper');
-
-  const searchQuery = `מתכון ${dishRequest || ingredients}`;
-  const serperResp = await fetch("https://google.serper.dev/search", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-API-KEY": serperKey },
-    body: JSON.stringify({ q: searchQuery, gl: "il", hl: "iw", num: 6 })
-  });
-  const serperData = await serperResp.json();
-  if (serperData.error) throw new Error(serperData.error);
-
-  const urls = (serperData.organic || []).slice(0, 8).map(r => r.link).filter(Boolean);
-  const snippets = (serperData.organic || []).slice(0, 8).map(r => ({ url: r.link, text: `${r.title}\n${r.snippet || ''}` }));
-  if (!urls.length) throw new Error('לא נמצאו תוצאות');
-
-  const fetchWithTimeout = (url, ms = 8000) => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), ms);
-    return fetch(`https://r.jina.ai/${url}`, { signal: controller.signal })
-      .then(r => { clearTimeout(timer); if (!r.ok) throw new Error(`${r.status}`); return r.text(); })
-      .then(text => ({ url, text: text.slice(0, 2500) }))
-      .catch(() => null);
-  };
-
-  const jinaResults = await Promise.all(urls.map(url => fetchWithTimeout(url)));
-  const pageContents = jinaResults.map((res, i) =>
-    res ? res : { url: urls[i], text: snippets[i]?.text || '' }
-  ).filter(p => p.text.length > 50);
-
-  if (!pageContents.length) throw new Error('לא ניתן לקרוא את תוכן האתרים');
-  const webContext = pageContents.map((p, i) => `[${i+1}] URL: ${p.url}\n${p.text}`).join('\n\n---\n\n');
-
-  const filterInstructions = [
-    ingredients ? `מרכיבים זמינים: ${ingredients}. תן אחוז התאמה.` : '',
-    filters ? `דרישות תזונתיות: ${filters}. אם לא עומד — אל תכלול.` : '',
-    maxTime ? `זמן מקסימלי: ${maxTime} דקות. מתכונים ארוכים יותר — אל תכלול.` : '',
-  ].filter(Boolean).join('\n');
-
-  const groqResp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
-    body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
-      max_tokens: 4500,
-      temperature: 0.1,
-      messages: [
-        {
-          role: "system",
-          content: `אתה עוזר שמחלץ ומסנן מתכונים מעמודי אינטרנט. חוקים: 1. חלץ מתכון כמו שהוא — אל תשנה מילה. 2. מותר לשנות רק כמויות לפי מספר סועדים (${servings}). 3. דרישות תזונתיות לא מתקיימות — פסול לגמרי. 4. תן ingredientMatch 0-100. 5. זהה תגי dietary מהמתכון עצמו (טבעוני/צמחוני/ללא גלוטן וכו'). 6. JSON בלבד ללא markdown.`
-        },
-        {
-          role: "user",
-          content: `חלץ מתכונים מהתוכן הבא.\n${filterInstructions}\nסועדים: ${servings}\n\n${webContext}\n\nהחזר עד 3 מתכונים. סמן isBest:true לאחד.\nJSON בלבד:\n{"recipes":[{"name":"","description":"","time":30,"difficulty":"קל","servings":${servings},"dietary":["טבעוני"],"isBest":false,"bestReason":"","source":"","ingredientMatch":80,"ingredients":[""],"steps":[""],"nutrition":{"calories":300,"protein":20,"carbs":35,"fat":10},"tip":""}]}`
-        }
-      ]
-    })
-  });
-  const groqData = await groqResp.json();
-  if (groqData.error) throw new Error(groqData.error.message);
-  const text = groqData.choices[0].message.content;
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('תגובה לא תקינה');
-  return JSON.parse(match[0]).recipes || [];
+// ============================================================
+// SEARCH HISTORY
+// ============================================================
+function addToHistory(query) {
+  if (!query) return;
+  searchHistory = [query, ...searchHistory.filter(h => h !== query)].slice(0, 6);
+  localStorage.setItem('search_history_v1', JSON.stringify(searchHistory));
+  renderHistoryChips();
 }
 
-async function runAiMode(ingredients, dishRequest, filters, maxTime, difficulty, mealType, servings, apiKey) {
-  const prompt = `אתה שף מומחה ישראלי עם ניסיון של 20 שנה.
-${dishRequest ? 'המשתמש רוצה להכין: ' + dishRequest : ''}
-${ingredients ? 'מרכיבים זמינים: ' + ingredients : ''}
-${filters ? `דרישות תזונתיות חובה: ${filters}` : ''}
-${maxTime ? `זמן הכנה מקסימלי: ${maxTime} דקות` : ''}
-${difficulty ? `רמת קושי רצויה: ${difficulty}` : ''}
-${mealType ? `סוג ארוחה: ${mealType}` : ''}
-מספר סועדים: ${servings}
-
-המצא 3 מתכונים מקוריים. זהה את תגי dietary המתאימים (טבעוני/צמחוני/ללא גלוטן/כשר וכו') לכל מתכון.
-סמן אחד כ-isBest:true עם bestReason.
-החזר JSON בלבד:
-{"recipes":[{"name":"","description":"","time":30,"difficulty":"קל","servings":${servings},"dietary":["טבעוני"],"isBest":false,"bestReason":"","ingredients":[""],"steps":[""],"nutrition":{"calories":350,"protein":25,"carbs":30,"fat":12},"tip":""}]}`;
-
-  const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
-    body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
-      max_tokens: 4000,
-      temperature: 0.7,
-      messages: [
-        { role: "system", content: "אתה שף מומחה ישראלי. תמיד תחזיר JSON תקין בלבד ללא markdown." },
-        { role: "user", content: prompt }
-      ]
-    })
-  });
-  const data = await resp.json();
-  if (data.error) throw new Error(data.error.message);
-  const text = data.choices[0].message.content;
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('תגובה לא תקינה');
-  return JSON.parse(match[0]).recipes || [];
+function renderHistoryChips() {
+  const wrap = document.getElementById('historyChips');
+  if (!searchHistory.length) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = '<span style="font-size:0.75rem;color:var(--muted)">🕐 אחרונים:</span>' +
+    searchHistory.map((h,i) => `<span class="history-chip" onclick="useHistory('${h.replace(/'/g,"\\'")}')">
+      ${h} <span class="chip-del" onclick="event.stopPropagation();removeHistory(${i})">✕</span>
+    </span>`).join('');
 }
 
-async function generateRecipes() {
-  const ingredients = document.getElementById('ingredientsInput').value.trim();
-  const dishRequest = document.getElementById('dishInput').value.trim();
-  if (!ingredients && !dishRequest && !activeModes.has('mine')) { alert('אנא הכניסי מה תרצי להכין או מרכיבים 😊'); return; }
+function useHistory(query) {
+  document.getElementById('dishInput').value = query;
+}
 
-  const apiKey = getApiKey();
-  if ((activeModes.has('ai') || activeModes.has('web')) && (!apiKey || !apiKey.startsWith('gsk_'))) {
-    alert('אנא הכניסי את מפתח ה-API של Groq 🔑');
-    document.getElementById('resultsArea').innerHTML = `<div class="empty-state"><div class="icon">🔑</div><p>הכניסי מפתח Groq בשורה למעלה</p></div>`;
+function removeHistory(idx) {
+  searchHistory.splice(idx, 1);
+  localStorage.setItem('search_history_v1', JSON.stringify(searchHistory));
+  renderHistoryChips();
+}
+
+// ============================================================
+// LIVE SEARCH / FILTER
+// ============================================================
+function filterResults(query) {
+  const q = query.toLowerCase().trim();
+  const grid = document.querySelector('#resultsArea .results-grid');
+  if (!grid) return;
+  const cards = grid.querySelectorAll('.recipe-card');
+  let visible = 0;
+  cards.forEach(card => {
+    const text = card.textContent.toLowerCase();
+    const show = !q || text.includes(q);
+    card.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  document.getElementById('resultsCount').textContent = `${visible} מתכונים`;
+}
+
+// ============================================================
+// FAVORITES
+// ============================================================
+function isFavorite(recipe) {
+  return favorites.some(f => f.name === recipe.name);
+}
+
+function toggleFavorite(recipe, btnEl) {
+  if (isFavorite(recipe)) {
+    favorites = favorites.filter(f => f.name !== recipe.name);
+    showToast('הוסר ממועדפים');
+    if (btnEl) { btnEl.classList.remove('fav-active'); btnEl.textContent = '🤍 מועדף'; }
+  } else {
+    favorites.push(recipe);
+    showToast('❤️ נוסף למועדפים!');
+    if (btnEl) { btnEl.classList.add('fav-active'); btnEl.textContent = '❤️ מועדף'; }
+  }
+  localStorage.setItem('favorites_v1', JSON.stringify(favorites));
+  updateBadges();
+}
+
+function renderFavorites() {
+  const grid = document.getElementById('favoritesGrid');
+  document.getElementById('favCount').textContent = `${favorites.length} מתכונים`;
+  if (!favorites.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">🤍</div><p>עדיין לא הוספת מועדפים</p><p style="font-size:0.78rem;margin-top:6px">לחץ על ❤️ בכל מתכון כדי לשמור</p></div>`;
     return;
   }
+  grid.innerHTML = '';
+  favorites.forEach((r, i) => {
+    const card = buildRecipeCard(r, 'mine', i);
+    grid.appendChild(card);
+  });
+}
 
-  const btn = document.getElementById('generateBtn');
-  btn.disabled = true;
-  const servings = document.getElementById('servings').value;
-  const maxTime = document.getElementById('maxTime').value;
-  const difficulty = document.getElementById('difficulty').value;
-  const mealType = document.getElementById('mealType').value;
-  const filters = [...activeFilters].join(', ') || '';
+// ============================================================
+// STAR RATINGS
+// ============================================================
+function setRating(recipeKey, stars) {
+  ratings[recipeKey] = stars;
+  localStorage.setItem('ratings_v1', JSON.stringify(ratings));
+  const el = document.getElementById('stars-' + recipeKey);
+  if (el) renderStars(el, recipeKey, stars);
+  showToast(`⭐ דירגת ${stars}/5`);
+}
 
-  document.getElementById('resultsArea').innerHTML = `<div class="loading-box"><div class="spinner"></div><div>מחפש מתכונים...</div></div>`;
+function renderStars(container, key, current) {
+  container.innerHTML = '';
+  for (let i = 1; i <= 5; i++) {
+    const s = document.createElement('span');
+    s.className = 'star' + (i <= current ? ' filled' : '');
+    s.textContent = '★';
+    s.onclick = (e) => { e.stopPropagation(); setRating(key, i); };
+    container.appendChild(s);
+  }
+}
 
-  const allRecipes = [];
-  let bestPicked = false;
+// ============================================================
+// SHOPPING LIST
+// ============================================================
+function addToShoppingList(recipe) {
+  const recipeName = recipe.name;
+  let added = 0;
+  (recipe.ingredients || []).forEach(ing => {
+    const exists = shoppingList.find(i => i.text === ing && i.recipe === recipeName);
+    if (!exists) {
+      shoppingList.push({ text: ing, recipe: recipeName, checked: false, id: Date.now() + Math.random() });
+      added++;
+    }
+  });
+  localStorage.setItem('shopping_v1', JSON.stringify(shoppingList));
+  updateBadges();
+  showToast(`🛒 נוספו ${added} מרכיבים לרשימת הקניות!`);
+}
 
-  function addAndRender(recipes, mode) {
-    recipes.forEach(r => {
-      if (r.isBest && !bestPicked) {
-        bestPicked = true;
-      } else {
-        r.isBest = false;
-        r.bestReason = '';
-      }
-      allRecipes.push({ ...r, _mode: mode });
+function renderShopList() {
+  const container = document.getElementById('shopItems');
+  document.getElementById('shopCount').textContent = `${shoppingList.length} פריטים`;
+  if (!shoppingList.length) {
+    container.innerHTML = '<div class="shop-empty">🛒 הרשימה ריקה<br><small>פתח מתכון ולחץ "הוסף לקניות"</small></div>';
+    return;
+  }
+  container.innerHTML = '';
+  shoppingList.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'shop-item' + (item.checked ? ' checked' : '');
+    div.innerHTML = `<input type="checkbox" ${item.checked?'checked':''} onchange="toggleShopItem('${item.id}',this.checked)">
+      <span>${item.text}</span>
+      <span class="item-recipe">${item.recipe}</span>
+      <button onclick="removeShopItem('${item.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.8rem">✕</button>`;
+    container.appendChild(div);
+  });
+}
+
+function toggleShopItem(id, checked) {
+  const item = shoppingList.find(i => String(i.id) === String(id));
+  if (item) item.checked = checked;
+  localStorage.setItem('shopping_v1', JSON.stringify(shoppingList));
+  renderShopList();
+}
+
+function removeShopItem(id) {
+  shoppingList = shoppingList.filter(i => String(i.id) !== String(id));
+  localStorage.setItem('shopping_v1', JSON.stringify(shoppingList));
+  updateBadges(); renderShopList();
+}
+
+function clearCheckedItems() {
+  shoppingList = shoppingList.filter(i => !i.checked);
+  localStorage.setItem('shopping_v1', JSON.stringify(shoppingList));
+  updateBadges(); renderShopList();
+}
+
+function clearAllShop() {
+  if (!confirm('לנקות את כל רשימת הקניות?')) return;
+  shoppingList = [];
+  localStorage.setItem('shopping_v1', JSON.stringify(shoppingList));
+  updateBadges(); renderShopList();
+}
+
+function copyShoppingList() {
+  if (!shoppingList.length) { showToast('הרשימה ריקה'); return; }
+  const text = shoppingList.map(i => (i.checked ? '✅ ' : '• ') + i.text).join('\n');
+  navigator.clipboard.writeText(text).then(() => showToast('📋 רשימת הקניות הועתקה!'));
+}
+
+function updateBadges() {
+  const favBadge = document.getElementById('favBadge');
+  const shopBadge = document.getElementById('shopBadge');
+  if (favorites.length) { favBadge.style.display='inline-flex'; favBadge.textContent=favorites.length; }
+  else { favBadge.style.display='none'; }
+  const shopUnchecked = shoppingList.filter(i=>!i.checked).length;
+  if (shopUnchecked) { shopBadge.style.display='inline-flex'; shopBadge.textContent=shopUnchecked; }
+  else { shopBadge.style.display='none'; }
+}
+
+// ============================================================
+// TIMER
+// ============================================================
+function buildTimerBox(suggestedMinutes) {
+  const mins = suggestedMinutes || 30;
+  return `
+  <div class="timer-box">
+    <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px;text-align:center">⏱️ טיימר בישול</div>
+    <div class="timer-input-wrap">
+      <button class="timer-preset" onclick="setTimerMins(5)">5 דק'</button>
+      <button class="timer-preset" onclick="setTimerMins(10)">10 דק'</button>
+      <button class="timer-preset" onclick="setTimerMins(${mins})">${mins} דק'</button>
+      <button class="timer-preset" onclick="setTimerMins(60)">שעה</button>
+    </div>
+    <div class="timer-display" id="timerDisplay">00:00</div>
+    <div class="timer-controls">
+      <input id="timerManualMins" type="number" value="${mins}" min="1" max="999" style="width:56px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:5px 8px;color:var(--text);font-size:0.9rem;text-align:center">
+      <button class="timer-start-btn" id="timerStartBtn" onclick="startTimer()">▶ התחל</button>
+      <button class="timer-stop-btn" onclick="stopTimer()">■ עצור</button>
+    </div>
+  </div>`;
+}
+
+function setTimerMins(m) {
+  stopTimer();
+  document.getElementById('timerManualMins').value = m;
+  timerSeconds = m * 60;
+  updateTimerDisplay();
+}
+
+function startTimer() {
+  if (timerRunning) return;
+  const mins = parseInt(document.getElementById('timerManualMins')?.value) || 30;
+  if (!timerSeconds) timerSeconds = mins * 60;
+  timerRunning = true;
+  document.getElementById('timerStartBtn').textContent = '⏸ פועל';
+  timerInterval = setInterval(() => {
+    if (timerSeconds <= 0) {
+      clearInterval(timerInterval);
+      timerRunning = false;
+      document.getElementById('timerDisplay').classList.add('done');
+      document.getElementById('timerDisplay').textContent = '⏰ סיים!';
+      showToast('⏰ הטיימר הסתיים!', 4000);
+      return;
+    }
+    timerSeconds--;
+    updateTimerDisplay();
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+  timerRunning = false;
+  timerSeconds = 0;
+  const disp = document.getElementById('timerDisplay');
+  if (disp) { disp.classList.remove('done','running'); disp.textContent = '00:00'; }
+  const btn = document.getElementById('timerStartBtn');
+  if (btn) btn.textContent = '▶ התחל';
+}
+
+function updateTimerDisplay() {
+  const disp = document.getElementById('timerDisplay');
+  if (!disp) return;
+  const m = String(Math.floor(timerSeconds/60)).padStart(2,'0');
+  const s = String(timerSeconds%60).padStart(2,'0');
+  disp.textContent = `${m}:${s}`;
+  disp.classList.toggle('running', timerRunning);
+}
+
+// ============================================================
+// SERVINGS SCALER
+// ============================================================
+function scaleIngredients(ingredients, scale) {
+  return ingredients.map(ing => {
+    return ing.replace(/(\d+\.?\d*)/g, (match, num) => {
+      const scaled = parseFloat(num) * scale;
+      return scaled % 1 === 0 ? scaled : scaled.toFixed(1);
     });
-    if (allRecipes.length > 0) renderRecipes(allRecipes, 'multi');
-  }
-
-  const tasks = [];
-  if (activeModes.has('mine')) tasks.push('mine');
-  if (activeModes.has('web')) tasks.push('web');
-  if (activeModes.has('ai')) tasks.push('ai');
-
-  for (const mode of tasks) {
-    if (mode === 'mine') {
-      const filtered = ingredients || dishRequest
-        ? myRecipes.filter(r => r.name.includes(dishRequest || ingredients) || r.ingredients.some(i => i.includes(ingredients)))
-        : myRecipes;
-      addAndRender(filtered, 'mine');
-      continue;
-    }
-    try {
-      btn.textContent = mode === 'web' ? '🌐 מחפש באינטרנט...' : '🤖 ממציא מתכונים...';
-      let recipes = [];
-      if (mode === 'web') {
-        recipes = await runWebMode(ingredients, dishRequest, filters, maxTime, servings, apiKey);
-        modeResults['web'] = { recipes };
-      } else {
-        recipes = await runAiMode(ingredients, dishRequest, filters, maxTime, difficulty, mealType, servings, apiKey);
-        modeResults['ai'] = { recipes };
-      }
-      addAndRender(recipes, mode);
-    } catch(e) {
-      console.error(mode, e.message);
-    }
-  }
-
-  if (!allRecipes.length) {
-    document.getElementById('resultsArea').innerHTML = `<div class="empty-state"><div class="icon">😕</div><p>לא נמצאו מתכונים</p></div>`;
-  }
-  btn.disabled = false; btn.textContent = '✨ מצאי לי מתכונים!';
+  });
 }
 
-function renderRecipes(recipes, mode) {
-  const valid = (recipes || []).filter(r => r.name && r.ingredients && r.ingredients.length > 0 && r.steps && r.steps.length > 0);
-  if (!valid.length) {
-    document.getElementById('resultsArea').innerHTML = `<div class="empty-state"><div class="icon">🤔</div><p>לא נמצאו מתכונים מתאימים</p></div>`;
-    return;
+function changeServings(delta) {
+  const base = currentModalRecipe?.servings || 4;
+  const currentScaled = Math.round(base * currentServingsScale);
+  const newScaled = Math.max(1, currentScaled + delta);
+  currentServingsScale = newScaled / base;
+  document.getElementById('scaleNum').textContent = newScaled;
+  const scaledIngs = scaleIngredients(currentModalRecipe.ingredients || [], currentServingsScale);
+  const ul = document.getElementById('modalIngredientsList');
+  if (ul) ul.innerHTML = scaledIngs.map(i=>`<li>${i}</li>`).join('');
+}
+
+// ============================================================
+// SHARE / PRINT / COPY
+// ============================================================
+function shareRecipe(r) {
+  const text = `🍽️ ${r.name}\n\n🥕 מרכיבים:\n${(r.ingredients||[]).map(i=>'• '+i).join('\n')}\n\n👨‍🍳 הכנה:\n${(r.steps||[]).map((s,i)=>`${i+1}. ${s}`).join('\n')}\n\n⏱️ ${r.time||'?'} דק' | 👥 ${r.servings||'?'} סועדים\n\nמתכון בקליק 🤖`;
+  if (navigator.share) {
+    navigator.share({ title: r.name, text });
+  } else {
+    navigator.clipboard.writeText(text).then(() => showToast('📋 המתכון הועתק ללוח!'));
   }
-  const bm = {ai:'badge-ai',web:'badge-web',mine:'badge-mine'};
-  const bl = {ai:'🤖 המצאת AI',web:'🌐 חיפוש AI',mine:'📚 המתכון שלי'};
-  const grid = document.createElement('div');
-  grid.className = 'results-grid';
-  valid.forEach((r, i) => {
-    const rMode = r._mode || mode;
-    const card = document.createElement('div');
-    card.className = 'recipe-card';
-    card.style.animationDelay = (i * 0.1) + 's';
-    card.onclick = () => openRecipeModal(r, rMode);
-    card.innerHTML = `<div class="card-body">
+}
+
+function printRecipe() {
+  window.print();
+}
+
+function copyRecipeText(r) {
+  const text = `🍽️ ${r.name}\n${r.description||''}\n\n📋 מרכיבים:\n${(r.ingredients||[]).map(i=>'• '+i).join('\n')}\n\n👨‍🍳 הוראות הכנה:\n${(r.steps||[]).map((s,i)=>`${i+1}. ${s}`).join('\n')}${r.tip?'\n\n💡 טיפ: '+r.tip:''}`;
+  navigator.clipboard.writeText(text).then(() => showToast('📋 המתכון הועתק!'));
+}
+
+// ============================================================
+// RENDER RECIPE CARD
+// ============================================================
+function buildRecipeCard(r, mode, i) {
+  const bm = {ai:'badge-ai', web:'badge-web', mine:'badge-mine'};
+  const bl = {ai:'🤖 AI', web:'🌐 חיפוש', mine:'📚 שלי'};
+  const rMode = r._mode || mode;
+  const ratingKey = r.name.replace(/\s/g,'_');
+  const currentRating = ratings[ratingKey] || 0;
+  const card = document.createElement('div');
+  card.className = 'recipe-card';
+  card.style.animationDelay = (i * 0.1) + 's';
+  card.onclick = () => openRecipeModal(r, rMode);
+  card.innerHTML = `
+    <button class="fav-btn-card ${isFavorite(r)?'active':''}" onclick="event.stopPropagation();toggleFavCard(this,'${r.name.replace(/'/g,"\\'")}',${i})">${isFavorite(r)?'❤️':'🤍'}</button>
+    <div class="card-body">
       ${r.isBest ? '<div class="best-badge">⭐ ההמלצה שלנו</div><br>' : ''}
-      <span class="card-badge ${bm[rMode]}">${bl[rMode]}</span>
-      ${rMode === 'web' && r.ingredientMatch != null ? `<span style="font-size:0.72rem;padding:3px 8px;border-radius:50px;font-weight:700;margin-right:4px;background:${r.ingredientMatch>=80?'rgba(92,184,92,0.15)':r.ingredientMatch>=50?'rgba(232,184,109,0.15)':'rgba(192,57,43,0.15)'};color:${r.ingredientMatch>=80?'#7ddb7d':r.ingredientMatch>=50?'var(--accent)':'#e74c3c'}">🥕 ${r.ingredientMatch}% התאמה</span>` : ''}
+      <span class="card-badge ${bm[rMode]||'badge-ai'}">${bl[rMode]||'🤖 AI'}</span>
+      ${rMode === 'web' && r.ingredientMatch != null ? `<span style="font-size:0.72rem;padding:3px 8px;border-radius:50px;font-weight:700;margin-right:4px;background:${r.ingredientMatch>=80?'rgba(92,184,92,0.15)':r.ingredientMatch>=50?'rgba(232,184,109,0.15)':'rgba(192,57,43,0.15)'};color:${r.ingredientMatch>=80?'#7ddb7d':r.ingredientMatch>=50?'var(--accent)':'#e74c3c'}">🥕 ${r.ingredientMatch}%</span>` : ''}
       <div class="card-title">${r.name}</div>
       <div class="card-desc">${r.description || ''}</div>
       <div class="card-meta">
@@ -668,15 +954,70 @@ function renderRecipes(recipes, mode) {
         ${r.source ? `<span>🔗 ${r.source}</span>` : ''}
       </div>
       ${r.dietary && r.dietary.length ? `<div class="dietary-tags">${r.dietary.map(d=>`<span class="dtag">${d}</span>`).join('')}</div>` : ''}
+      <div class="card-stars" id="stars-${ratingKey}"></div>
     </div>`;
-    grid.appendChild(card);
+  card._recipeData = r;
+  setTimeout(() => {
+    const starsEl = card.querySelector('.card-stars');
+    if (starsEl) renderStars(starsEl, ratingKey, currentRating);
+  }, 0);
+  return card;
+}
+
+// Fav toggle from card button (needs to find recipe in allRenderedRecipes)
+function toggleFavCard(btnEl, recipeName, idx) {
+  const r = allRenderedRecipes.find(rec => rec.name === recipeName);
+  if (!r) return;
+  if (isFavorite(r)) {
+    favorites = favorites.filter(f => f.name !== r.name);
+    btnEl.textContent = '🤍'; btnEl.classList.remove('active');
+    showToast('הוסר ממועדפים');
+  } else {
+    favorites.push(r);
+    btnEl.textContent = '❤️'; btnEl.classList.add('active');
+    showToast('❤️ נוסף למועדפים!');
+  }
+  localStorage.setItem('favorites_v1', JSON.stringify(favorites));
+  updateBadges();
+}
+
+// ============================================================
+// RENDER RECIPES
+// ============================================================
+function renderRecipes(recipes, mode) {
+  const valid = (recipes || []).filter(r => r.name && r.ingredients && r.ingredients.length > 0 && r.steps && r.steps.length > 0);
+  if (!valid.length) {
+    document.getElementById('resultsArea').innerHTML = `<div class="empty-state"><div class="icon">🤔</div><p>לא נמצאו מתכונים מתאימים</p></div>`;
+    document.getElementById('liveSearchWrap').style.display = 'none';
+    return;
+  }
+  allRenderedRecipes = valid;
+  const grid = document.createElement('div');
+  grid.className = 'results-grid';
+  valid.forEach((r, i) => {
+    grid.appendChild(buildRecipeCard(r, mode, i));
   });
   document.getElementById('resultsArea').innerHTML = '';
   document.getElementById('resultsArea').appendChild(grid);
+  // show live search
+  const lsWrap = document.getElementById('liveSearchWrap');
+  lsWrap.style.display = 'flex';
+  document.getElementById('liveSearchInput').value = '';
+  document.getElementById('resultsCount').textContent = `${valid.length} מתכונים`;
 }
 
+// ============================================================
+// OPEN MODAL
+// ============================================================
 function openRecipeModal(r, mode) {
+  currentModalRecipe = r;
+  currentServingsScale = 1;
+  baseServings = r.servings || 4;
+  stopTimer();
   const n = r.nutrition || {};
+  const ratingKey = r.name.replace(/\s/g,'_');
+  const currentRating = ratings[ratingKey] || 0;
+  const favActive = isFavorite(r);
   document.getElementById('modalBody').innerHTML = `
     <div class="modal-title">${r.name}</div>
     <div class="modal-subtitle">${r.description || ''}</div>
@@ -688,11 +1029,31 @@ function openRecipeModal(r, mode) {
     </div>
     ${r.dietary&&r.dietary.length?`<div class="dietary-tags" style="margin-bottom:12px">${r.dietary.map(d=>`<span class="dtag">${d}</span>`).join('')}</div>`:''}
     ${r.isBest&&r.bestReason?`<div class="best-reason-box">⭐ <strong>למה זה הכי מומלץ:</strong> ${r.bestReason}</div>`:''}
+
+    <!-- STAR RATING IN MODAL -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <span style="font-size:0.8rem;color:var(--muted)">הדירוג שלי:</span>
+      <div id="modal-stars-${ratingKey}" style="display:flex;gap:3px;font-size:1.1rem"></div>
+    </div>
+
+    <!-- SERVINGS SCALER -->
+    <div class="servings-scaler">
+      <label>👥 מנות:</label>
+      <button class="scale-btn" onclick="changeServings(-1)">−</button>
+      <span class="scale-num" id="scaleNum">${baseServings}</span>
+      <button class="scale-btn" onclick="changeServings(1)">+</button>
+      <span style="font-size:0.78rem;color:var(--muted);margin-right:6px">כמויות מחושבות אוטומטית</span>
+    </div>
+
     <div class="recipe-section-title">🥕 מרכיבים</div>
-    <ul class="ingredients-list">${(r.ingredients||[]).map(i=>`<li>${i}</li>`).join('')}</ul>
+    <ul class="ingredients-list" id="modalIngredientsList">${(r.ingredients||[]).map(i=>`<li>${i}</li>`).join('')}</ul>
     <div class="recipe-section-title">👨‍🍳 הוראות הכנה</div>
     <ol class="steps-list">${(r.steps||[]).map((s,i)=>`<li><span class="step-num">${i+1}</span><span>${s}</span></li>`).join('')}</ol>
     ${r.tip?`<div style="background:var(--bg);border-right:3px solid var(--accent);padding:10px 14px;border-radius:8px;margin-top:14px;font-size:0.84rem"><strong>💡 טיפ של שף:</strong> ${r.tip}</div>`:''}
+
+    <!-- TIMER -->
+    ${buildTimerBox(r.time)}
+
     ${n.calories?`
     <div class="recipe-section-title">📊 ערכים תזונתיים (למנה)</div>
     <div class="nutritional-grid">
@@ -707,19 +1068,207 @@ function openRecipeModal(r, mode) {
       <div class="nutrition-bar-row"><div class="nutrition-bar-label">פחמימות</div><div class="nutrition-bar-bg"><div class="nutrition-bar-fill" style="width:${Math.min(100,n.carbs/100*100)}%;background:#7eb0f7"></div></div><div class="nutrition-bar-val">${n.carbs}g</div></div>
       <div class="nutrition-bar-row"><div class="nutrition-bar-label">שומן</div><div class="nutrition-bar-bg"><div class="nutrition-bar-fill" style="width:${Math.min(100,n.fat/50*100)}%;background:#f0c87d"></div></div><div class="nutrition-bar-val">${n.fat}g</div></div>
     </div>`:''}
-    <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
+
+    <!-- ACTION BAR -->
+    <div class="modal-actions">
+      <button class="modal-action-btn ${favActive?'fav-active':''}" id="modalFavBtn" onclick="toggleFavModal()">
+        ${favActive?'❤️ מועדף':'🤍 הוסף למועדפים'}
+      </button>
+      <button class="modal-action-btn" onclick="addToShoppingList(currentModalRecipe);this.classList.add('cart-added');this.textContent='✅ נוסף לקניות'">🛒 הוסף לקניות</button>
+      <button class="modal-action-btn" onclick="shareRecipe(currentModalRecipe)">📤 שתף</button>
+      <button class="modal-action-btn" onclick="copyRecipeText(currentModalRecipe)">📋 העתק</button>
+      <button class="modal-action-btn" onclick="printRecipe()">🖨️ הדפס</button>
+      ${mode==='ai'||mode==='web'?`<button class="modal-action-btn" onclick="saveAsMyRecipe(currentModalRecipe)">💾 שמור שלי</button>`:''}
     </div>
   `;
+  // render modal stars
+  const modalStarsEl = document.getElementById(`modal-stars-${ratingKey}`);
+  if (modalStarsEl) renderStars(modalStarsEl, ratingKey, currentRating);
   document.getElementById('recipeModal').classList.add('open');
 }
 
-function closeModal() { document.getElementById('recipeModal').classList.remove('open'); }
+function toggleFavModal() {
+  const btn = document.getElementById('modalFavBtn');
+  toggleFavorite(currentModalRecipe, btn);
+}
+
+function saveAsMyRecipe(r) {
+  const exists = myRecipes.find(m => m.name === r.name);
+  if (exists) { showToast('המתכון כבר שמור!'); return; }
+  const recipe = { ...r, id: Date.now(), _mode: 'mine' };
+  myRecipes.push(recipe);
+  localStorage.setItem('myRecipes_v2', JSON.stringify(myRecipes));
+  showToast('💾 המתכון נשמר במתכונים שלי!');
+}
+
+function closeModal() {
+  stopTimer();
+  document.getElementById('recipeModal').classList.remove('open');
+}
 function closeModalBg(e) { if (e.target === document.getElementById('recipeModal')) closeModal(); }
 
+// ============================================================
+// WEB MODE
+// ============================================================
+async function runWebMode(ingredients, dishRequest, filters, maxTime, servings, apiKey) {
+  const serperKey = getSerperKey();
+  if (!serperKey || serperKey.length < 10) throw new Error('חסר מפתח Serper');
+  const searchQuery = `מתכון ${dishRequest || ingredients}`;
+  const serperResp = await fetch("https://google.serper.dev/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-API-KEY": serperKey },
+    body: JSON.stringify({ q: searchQuery, gl: "il", hl: "iw", num: 6 })
+  });
+  if (serperResp.status === 403) throw new Error('מפתח Serper לא תקין או פג תוקף — בדוק את המפתח ב-serper.dev');
+  if (serperResp.status === 429) throw new Error('חרגת ממכסת הבקשות של Serper — נסה שוב מאוחר יותר');
+  if (!serperResp.ok) throw new Error('שגיאה מ-Serper: ' + serperResp.status);
+  const serperData = await serperResp.json();
+  if (serperData.error) throw new Error(serperData.error);
+  const urls = (serperData.organic || []).slice(0, 8).map(r => r.link).filter(Boolean);
+  const snippets = (serperData.organic || []).slice(0, 8).map(r => ({ url: r.link, text: `${r.title}\n${r.snippet || ''}` }));
+  if (!urls.length) throw new Error('לא נמצאו תוצאות');
+  const fetchWithTimeout = (url, ms = 8000) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+    return fetch(`https://r.jina.ai/${url}`, { signal: controller.signal })
+      .then(r => { clearTimeout(timer); if (!r.ok) throw new Error(`${r.status}`); return r.text(); })
+      .then(text => ({ url, text: text.slice(0, 2500) }))
+      .catch(() => null);
+  };
+  const jinaResults = await Promise.all(urls.map(url => fetchWithTimeout(url)));
+  const pageContents = jinaResults.map((res, i) =>
+    res ? res : { url: urls[i], text: snippets[i]?.text || '' }
+  ).filter(p => p.text.length > 50);
+  if (!pageContents.length) throw new Error('לא ניתן לקרוא את תוכן האתרים');
+  const webContext = pageContents.map((p, i) => `[${i+1}] URL: ${p.url}\n${p.text}`).join('\n\n---\n\n');
+  const filterInstructions = [
+    ingredients ? `מרכיבים זמינים: ${ingredients}. תן אחוז התאמה.` : '',
+    filters ? `דרישות תזונתיות: ${filters}. אם לא עומד — אל תכלול.` : '',
+    maxTime ? `זמן מקסימלי: ${maxTime} דקות. מתכונים ארוכים יותר — אל תכלול.` : '',
+  ].filter(Boolean).join('\n');
+  const groqResp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile", max_tokens: 4500, temperature: 0.1,
+      messages: [
+        { role: "system", content: `אתה עוזר שמחלץ ומסנן מתכונים מעמודי אינטרנט. חוקים: 1. חלץ מתכון כמו שהוא. 2. מותר לשנות כמויות לפי סועדים (${servings}). 3. JSON בלבד ללא markdown.` },
+        { role: "user", content: `חלץ מתכונים מהתוכן הבא.\n${filterInstructions}\nסועדים: ${servings}\n\n${webContext}\n\nהחזר עד 3 מתכונים. סמן isBest:true לאחד.\nJSON בלבד:\n{"recipes":[{"name":"","description":"","time":30,"difficulty":"קל","servings":${servings},"dietary":[],"isBest":false,"bestReason":"","source":"","ingredientMatch":80,"ingredients":[""],"steps":[""],"nutrition":{"calories":300,"protein":20,"carbs":35,"fat":10},"tip":""}]}` }
+      ]
+    })
+  });
+  const groqData = await groqResp.json();
+  if (groqData.error) throw new Error(groqData.error.message);
+  const text = groqData.choices[0].message.content;
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('תגובה לא תקינה');
+  return JSON.parse(match[0]).recipes || [];
+}
+
+// ============================================================
+// AI MODE
+// ============================================================
+async function runAiMode(ingredients, dishRequest, filters, maxTime, difficulty, mealType, servings, apiKey) {
+  const prompt = `אתה שף מומחה ישראלי עם ניסיון של 20 שנה.
+${dishRequest ? 'המשתמש רוצה להכין: ' + dishRequest : ''}
+${ingredients ? 'מרכיבים זמינים: ' + ingredients : ''}
+${filters ? `דרישות תזונתיות חובה: ${filters}` : ''}
+${maxTime ? `זמן הכנה מקסימלי: ${maxTime} דקות` : ''}
+${difficulty ? `רמת קושי רצויה: ${difficulty}` : ''}
+${mealType ? `סוג ארוחה: ${mealType}` : ''}
+מספר סועדים: ${servings}
+המצא 3 מתכונים מקוריים. זהה תגי dietary. סמן אחד כ-isBest:true עם bestReason.
+החזר JSON בלבד:
+{"recipes":[{"name":"","description":"","time":30,"difficulty":"קל","servings":${servings},"dietary":[],"isBest":false,"bestReason":"","ingredients":[""],"steps":[""],"nutrition":{"calories":350,"protein":25,"carbs":30,"fat":12},"tip":""}]}`;
+  const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile", max_tokens: 4000, temperature: 0.7,
+      messages: [
+        { role: "system", content: "אתה שף מומחה ישראלי. תמיד תחזיר JSON תקין בלבד ללא markdown." },
+        { role: "user", content: prompt }
+      ]
+    })
+  });
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error.message);
+  const text = data.choices[0].message.content;
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('תגובה לא תקינה');
+  return JSON.parse(match[0]).recipes || [];
+}
+
+// ============================================================
+// GENERATE
+// ============================================================
+async function generateRecipes() {
+  const ingredients = document.getElementById('ingredientsInput').value.trim();
+  const dishRequest = document.getElementById('dishInput').value.trim();
+  const apiKey = getApiKey();
+  if ((activeModes.has('ai') || activeModes.has('web')) && (!apiKey || !apiKey.startsWith('gsk_'))) {
+    showToast('אנא הכניסי את מפתח ה-API של Groq 🔑');
+    document.getElementById('resultsArea').innerHTML = `<div class="empty-state"><div class="icon">🔑</div><p>הכניסי מפתח Groq בשורה למעלה</p></div>`;
+    return;
+  }
+  // Save to history
+  if (dishRequest) addToHistory(dishRequest);
+  else if (ingredients) addToHistory(ingredients.split(',')[0].trim());
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+  const servings = document.getElementById('servings').value;
+  const maxTime = document.getElementById('maxTime').value;
+  const difficulty = document.getElementById('difficulty').value;
+  const mealType = document.getElementById('mealType').value;
+  const filters = [...activeFilters].join(', ') || '';
+  document.getElementById('resultsArea').innerHTML = `<div class="loading-box"><div class="spinner"></div><div>מחפש מתכונים...</div></div>`;
+  document.getElementById('liveSearchWrap').style.display = 'none';
+  const allRecipes = [];
+  let bestPicked = false;
+  function addAndRender(recipes, mode) {
+    recipes.forEach(r => {
+      if (r.isBest && !bestPicked) { bestPicked = true; }
+      else { r.isBest = false; r.bestReason = ''; }
+      allRecipes.push({ ...r, _mode: mode });
+    });
+    if (allRecipes.length > 0) renderRecipes(allRecipes, 'multi');
+  }
+  const tasks = [];
+  if (activeModes.has('mine')) tasks.push('mine');
+  if (activeModes.has('web')) tasks.push('web');
+  if (activeModes.has('ai')) tasks.push('ai');
+  for (const mode of tasks) {
+    if (mode === 'mine') {
+      const filtered = ingredients || dishRequest
+        ? myRecipes.filter(r => r.name.includes(dishRequest || ingredients) || r.ingredients.some(i => i.includes(ingredients)))
+        : myRecipes;
+      addAndRender(filtered, 'mine'); continue;
+    }
+    try {
+      btn.textContent = mode === 'web' ? '🌐 מחפש באינטרנט...' : '🤖 ממציא מתכונים...';
+      let recipes = [];
+      if (mode === 'web') recipes = await runWebMode(ingredients, dishRequest, filters, maxTime, servings, apiKey);
+      else recipes = await runAiMode(ingredients, dishRequest, filters, maxTime, difficulty, mealType, servings, apiKey);
+      addAndRender(recipes, mode);
+    } catch(e) {
+      console.error(mode, e.message);
+      const label = mode === 'web' ? 'חיפוש AI' : mode === 'ai' ? 'המצאת AI' : mode;
+      const isKeyErr = e.message.includes('תקין') || e.message.includes('פג תוקף') || e.message.includes('403');
+      showToast(`❌ ${label}: ${e.message}`, isKeyErr ? 5000 : 3000);
+    }
+  }
+  if (!allRecipes.length) {
+    document.getElementById('resultsArea').innerHTML = `<div class="empty-state"><div class="icon">😕</div><p>לא נמצאו מתכונים</p></div>`;
+  }
+  btn.disabled = false; btn.textContent = '✨ מצאי לי מתכונים!';
+}
+
+// ============================================================
 // MY RECIPES
+// ============================================================
 function saveMyRecipe() {
   const name = document.getElementById('newRecipeName').value.trim();
-  if (!name) { alert('אנא הכניסי שם מתכון'); return; }
+  if (!name) { showToast('אנא הכניסי שם מתכון'); return; }
   const r = {
     id: Date.now(), name,
     category: document.getElementById('newRecipeCategory').value,
@@ -730,12 +1279,13 @@ function saveMyRecipe() {
     dietary: document.getElementById('newRecipeTags').value.split(',').map(s=>s.trim()).filter(Boolean),
     tip: document.getElementById('newRecipeTip').value,
     description: document.getElementById('newRecipeCategory').value,
+    _mode: 'mine',
   };
   myRecipes.push(r);
   localStorage.setItem('myRecipes_v2', JSON.stringify(myRecipes));
   ['newRecipeName','newRecipeIngredients','newRecipeSteps','newRecipeTags','newRecipeTime','newRecipeTip'].forEach(id => document.getElementById(id).value = '');
   renderMyRecipes();
-  alert('✅ המתכון נשמר בהצלחה!');
+  showToast('✅ המתכון נשמר בהצלחה!');
 }
 
 function renderMyRecipes() {
@@ -774,27 +1324,24 @@ function deleteRecipe(id) {
   renderMyRecipes();
 }
 
-function showMyRecipesInSearch(search) {
-  const filtered = search ? myRecipes.filter(r =>
-    r.name.includes(search) || r.ingredients.some(i => i.includes(search)) || r.dietary.some(d => d.includes(search))
-  ) : myRecipes;
-  renderRecipes(filtered, 'mine');
-}
-
-// Copy API key
-function copyKey(inputId, btnId) {
-  const val = document.getElementById(inputId).value.trim();
-  if (!val) { alert('אין מפתח להעתקה'); return; }
-  navigator.clipboard.writeText(val).then(() => {
-    const btn = document.getElementById(btnId);
-    btn.textContent = '✅ הועתק!';
-    btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = '📋 העתק'; btn.classList.remove('copied'); }, 2000);
-  });
-}
-
-// Init
-
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('DOMContentLoaded', () => {
+  const groq = localStorage.getItem('groq_key');
+  const serper = localStorage.getItem('serper_key');
+  if (groq) document.getElementById('apiKeyInput').value = groq;
+  if (serper) document.getElementById('serperKeyInput').value = serper;
+  updateKeyStatus();
+  updateBadges();
+  renderHistoryChips();
+  if (localStorage.getItem('theme') === 'light') {
+    document.body.classList.add('light-mode');
+    document.getElementById('themeBtn').textContent = '🌑 כהה';
+  }
+  // keyboard: close modal on Escape
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+});
 </script>
 </body>
 </html>
