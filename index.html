@@ -162,6 +162,8 @@
   }
   .api-key-status.ok { background: rgba(92,184,92,0.15); color: #7ddb7d; }
   .api-key-status.missing { background: rgba(192,57,43,0.15); color: #e74c3c; }
+  .api-key-status.invalid { background: rgba(192,57,43,0.2); color: #ff6b6b; }
+  .api-key-status.warn { background: rgba(255,193,7,0.15); color: #ffc107; }
   .api-key-link { font-size: 0.78rem; color: var(--accent); text-decoration: none; }
   .api-key-link:hover { text-decoration: underline; }
   .copy-key-btn { background: rgba(232,184,109,0.12); border: 1px solid rgba(232,184,109,0.3); border-radius: 8px; padding: 5px 11px; color: var(--accent); font-family: 'Heebo', sans-serif; font-size: 0.78rem; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
@@ -373,22 +375,38 @@
 
 <script>
 function updateKeyStatus() {
-  const v = document.getElementById("apiKeyInput").value.trim();
-  const s = document.getElementById("apiKeyStatus");
-  if (v.startsWith("gsk_") && v.length > 20) {
-    s.textContent = "✅ תקין"; s.className = "api-key-status ok";
-  } else {
-    s.textContent = "⚠️ חסר"; s.className = "api-key-status missing";
-  }
+  const v  = document.getElementById("apiKeyInput").value.trim();
   const sv = document.getElementById("serperKeyInput").value.trim();
+  const s  = document.getElementById("apiKeyStatus");
   const ss = document.getElementById("serperKeyStatus");
-  if (sv.length > 10) {
+
+  const isGroqKey   = k => k.startsWith("gsk_") && k.length > 20;
+  const looksSerper = k => k.length > 10 && !k.startsWith("gsk_");
+
+  // --- Groq field ---
+  if (!v) {
+    s.textContent = "⚠️ חסר"; s.className = "api-key-status missing";
+  } else if (isGroqKey(v)) {
+    s.textContent = "✅ תקין"; s.className = "api-key-status ok";
+  } else if (looksSerper(v)) {
+    s.textContent = "🔀 זה המפתח של Serper"; s.className = "api-key-status warn";
+  } else {
+    s.textContent = "❌ לא תקין"; s.className = "api-key-status invalid";
+  }
+
+  // --- Serper field ---
+  if (!sv) {
+    ss.textContent = "⚠️ חסר"; ss.className = "api-key-status missing";
+  } else if (isGroqKey(sv)) {
+    ss.textContent = "🔀 זה המפתח של Groq"; ss.className = "api-key-status warn";
+  } else if (looksSerper(sv)) {
     ss.textContent = "✅ תקין"; ss.className = "api-key-status ok";
   } else {
-    ss.textContent = "⚠️ חסר"; ss.className = "api-key-status missing";
+    ss.textContent = "❌ לא תקין"; ss.className = "api-key-status invalid";
   }
+
   // Save keys to localStorage
-  if (v) localStorage.setItem('groq_key', v);
+  if (v)  localStorage.setItem('groq_key', v);
   if (sv) localStorage.setItem('serper_key', sv);
 }
 
